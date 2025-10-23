@@ -1,0 +1,71 @@
+# dm_alarm_tools.py
+from typing import List, Type
+import discord
+from langchain_core.tools import BaseTool
+from pydantic import BaseModel
+from bot_runner import global_client as client
+from bot_runner import is_client_ready
+from dotenv import load_dotenv
+import os
+
+# 채널로 공지 알림 보내기
+# 1-1 채널로 전체 알림을 보내는 스키마 설정
+class ChannelAlarm(BaseModel):
+    channel_id: str
+    content: str
+
+# 1-2 채널로 전체 공지 알림을 보내는 도구 생성
+class ChannelAlarmTool(BaseTool):
+    name: str = "discord_channel_alarm"
+    description: str = "DISCORD 공지 채널 ID와 공지 내용을 받아 채널로 공지 알림을 보냅니다."
+    args_schema: Type[BaseModel] = ChannelAlarm
+
+    # 동기 메서드는 사용하지 않음
+    def _run(self, *args, **kwargs):
+        raise NotImplementedError("ChannelAlarmTool은 비동기적으로 사용해야합니다.")
+    
+    async def _arun(self, channel_id: str, content: str) -> str:
+        # 봇이 Discord에 완전히 로그인 될 때까지 기다립니다.
+        # is_client_ready 플래그가 설정될 때까지 비동기적으로 대기합니다.
+        await is_client_ready.wait()
+
+        # 채널 알림 전송 로직 실행
+        try:
+            channel_id_int = int(channel_id)
+            channel = await client.fetch_channel(channel_id_int)
+
+            # --- 알림
+            user_mentions = "@everyone"
+            # 만약 Forbidden 에러가 발생한다면, 봇에게 'Send Messages'와 'Mention Everyone, Here, and All Roles' 권한이 없는 것
+
+            alarm_message = f"""
+            ## 📢 Potenup 공지 알림
+            {content}
+
+            ------------------------
+
+            **👤 알림 대상**
+            {user_mentions}
+            """
+            await channel.send(alarm_message)
+            return "✅ 채널로 공지 알림을 성공적으로 보냈습니다."
+        
+        except discord.NotFound:
+            # 존재하지 않는 사용자일 경우
+            error_message = f"❌ '{channel.id}' 채널을 찾을 수 없습니다."
+            print(error_message)
+            return error_message
+
+        except discord.Forbidden:
+            # 봇이 DM을 보낼 수 없는
+            error_message = f"❌ '{channel.name}' 해당 채널에 공지 알림을 보낼 수 없습니다. (권한이 있는지 확인해주세요.)"
+            print(error_message)
+            return error_message
+
+        except Exception as e:
+            error_message = f"❌ 채널 공지 알림 전송 중 오류 발생 {e}"
+            print(error_message)
+            return error_message
+
+
+    

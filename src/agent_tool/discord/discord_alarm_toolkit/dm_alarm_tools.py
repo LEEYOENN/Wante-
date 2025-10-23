@@ -5,28 +5,39 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from bot_runner import global_client as client
 from bot_runner import is_client_ready
+import pandas as pd
 
 # dm 알림 보내기
 # 1-1 DM으로 알림을 보내는 스키마 설정
 class DMAlarm(BaseModel):
-    user_ids: List[str] 
+    user_names: List[str] 
     content: str
 
+# 1-2 DM으로 알림을 보내는 도구 생성
 class DMAlarmTool(BaseTool):
-    name = "dm_alarm"
-    description: str = "사용자 DISCORD ID를 리스트로 받아 DM으로 공지 알림을 보냅니다."
+    name: str = "discord_dm_alarm"
+    description: str = "DM을 전송할 사용자 DISCORD ID를 리스트로 받아 개인으로 DM으로 공지 알림을 보냅니다."
     args_schema: Type[BaseModel] = DMAlarm
 
     # 동기 메서드는 사용하지 않음
     def _run(self, *args, **kwargs):
         raise NotImplementedError("DMAlarmTool은 비동기적으로 사용해야합니다.")
     
-    async def _arun(self, user_ids: List[str], content: str) -> str:
+    async def _arun(self, user_names: List[str], content: str, ) -> str:
         # 봇이 Discord에 완전히 로그인 될 때까지 기다립니다.
         # is_client_ready 플래그가 설정될 때까지 비동기적으로 대기합니다.
         await is_client_ready.wait()
 
         results = []
+
+        # csv 파일에서 사용자 discord id를 가져오기
+        discord_members_info = pd.read_csv("../../../../data/discord_server_member.csv")
+
+        user_ids = []
+
+        for row in discord_members_info.values:
+            if row[2] in user_names:
+                user_ids.append(row[0])
 
         # DM 전송 로직 실행
         for user_id in user_ids:
@@ -36,14 +47,16 @@ class DMAlarmTool(BaseTool):
                 user_mentions = f"<@{user.id}>"
 
                 alarm_message = f"""
-                            ## 📢 Potenup 공지 알림
-                            {content}
+                ## 📢 Potenup 공지 알림
+                **📝 알림 내용**
+                {content}
 
-                            ------------------------
+                ------------------------
 
-                            **👤 알림 대상**
-                            {user_mentions}
-                            """
+                **👤 알림 대상**\n{user_mentions}
+
+                """
+                
                 await user.send(alarm_message)
                 results.append(f"✅ {user.name}님에게 DM을 성공적으로 보냈습니다.")
             
