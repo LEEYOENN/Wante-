@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from bot_runner import global_client as client
 from bot_runner import is_client_ready
 import pandas as pd
+import textwrap
 
 # dm 알림 보내기
 # 1-1 DM으로 알림을 보내는 스키마 설정
@@ -31,7 +32,7 @@ class DMAlarmTool(BaseTool):
         results = []
 
         # csv 파일에서 사용자 discord id를 가져오기
-        discord_members_info = pd.read_csv("../../../../data/discord_server_member.csv")
+        discord_members_info = pd.read_csv(r"C:\Users\user\potenup\Wante\data\discord_server_member.csv")
 
         user_ids = []
 
@@ -39,6 +40,8 @@ class DMAlarmTool(BaseTool):
             if row[2] in user_names:
                 user_ids.append(row[0])
 
+        if len(user_ids) == 0:
+            return "사용자를 찾을 수 없습니다."
         # DM 전송 로직 실행
         for user_id in user_ids:
             try:
@@ -46,16 +49,17 @@ class DMAlarmTool(BaseTool):
                 user = await client.fetch_user(user_id_int)
                 user_mentions = f"<@{user.id}>"
 
-                alarm_message = f"""
-                ## 📢 Potenup 공지 알림
-                **📝 알림 내용**
+                alarm_message = textwrap.dedent(f"""
+                # 📢 Potenup 공지 알림
+                ## 📝 알림 내용
                 {content}
 
-                ------------------------
+                --------------------------------
 
-                **👤 알림 대상**\n{user_mentions}
+                **👤 알림 대상**
+                {user_mentions}
 
-                """
+                """)
                 
                 await user.send(alarm_message)
                 results.append(f"✅ {user.name}님에게 DM을 성공적으로 보냈습니다.")
