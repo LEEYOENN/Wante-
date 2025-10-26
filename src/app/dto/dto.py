@@ -1,11 +1,13 @@
 # 모듈 불러오기
-from typing import Annotated, TypedDict, Literal, List
-from langchain.schema import BaseMessage
-import operator
+from typing import Optional
+from pydantic import BaseModel
 
-class State(TypedDict):
-    # 모델 입출력
-    messages: Annotated[List[BaseMessage], operator.add]
+class ChatbotRequestDTO(BaseModel):
+    # 사용자 입력
+    question: str
 
-    # 현재 그래프가 진행중인 단계
-    status: Literal["acting", "done"]
+class ChatbotResponseDTO(BaseModel):
+    success: bool
+    message: str
+    data: Optional[dict] = None
+    
