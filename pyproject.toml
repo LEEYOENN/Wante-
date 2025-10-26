@@ -1,7 +1,39 @@
 [project]
+<<<<<<< HEAD
 name = "wante"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = "3.11"
 dependencies = []
+=======
+name = "wanswer"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "altair>=4.2.2",
+    "chromadb>=1.2.1",
+    "discord>=2.3.2",
+    "dotenv>=0.9.9",
+    "konlpy>=0.6.0",
+    "langchain>=1.0.1",
+    "langchain-chroma>=1.0.0",
+    "langchain-community>=0.4",
+    "langchain-core>=1.0.0",
+    "langchain-openai>=1.0.0",
+    "langchain-tavily>=0.2.12",
+    "langgraph>=1.0.1",
+    "langgraph-checkpoint-sqlite>=3.0.0",
+    "matplotlib>=3.10.7",
+    "pandas>=2.3.3",
+    "pillow>=12.0.0",
+    "pip>=25.3",
+    "plotly>=6.3.1",
+    "pymupdf>=1.26.5",
+    "pypdf>=6.1.2",
+    "streamlit>=1.22.0",
+    "tavily-python>=0.7.12",
+]
+>>>>>>> 9f11425 (Initial commit of the chatbot branch)
