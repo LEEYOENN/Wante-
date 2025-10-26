@@ -3,8 +3,8 @@ from typing import List, Type
 import discord
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
-from bot_runner import global_client as client
-from bot_runner import is_client_ready
+from ..bot_runner import global_client as client
+from ..bot_runner import is_client_ready
 import pandas as pd
 import textwrap
 
