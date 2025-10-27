@@ -5,9 +5,6 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from contextlib import asynccontextmanager
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from agent_tool.discord.bot_runner import run_bot_in_background, global_client, is_client_ready
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from models.discord_langgraph import get_discord_langgraph
 
@@ -18,16 +15,11 @@ from dto.dto import ChatbotRequestDTO, ChatbotResponseDTO
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("FastAPI applitcation statr..")
-    run_bot_in_background()
 
-    print("Discord bot이 시작되길 기다리는 중")
-    await is_client_ready.wait()
-    print("Discord bot이 준비되었습니다.")
     yield
 
     # 애플리케이션 종료시 실행
     print("FastAPI applitcation stop..")
-    #await global_client.close()
 
 ####### FastAPI 서버 세팅 #######
 
