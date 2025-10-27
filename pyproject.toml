@@ -3,5 +3,20 @@ name = "wante"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = "3.11"
-dependencies = []
+requires-python = ">=3.11"
+dependencies = [
+    "discord>=2.3.2",
+    "dotenv>=0.9.9",
+    "fastapi>=0.120.0",
+    "httpx>=0.28.1",
+    "ipykernel>=7.0.1",
+    "langchain==0.3.27",
+    "langchain-core==0.3.79",
+    "langchain-discord>=1.0.2",
+    "langchain-discord-shikenso>=1.1.1",
+    "langchain-openai==0.3.35",
+    "langgraph>=1.0.1",
+    "pandas>=2.3.3",
+    "streamlit>=1.50.0",
+    "uvicorn>=0.38.0",
+]
