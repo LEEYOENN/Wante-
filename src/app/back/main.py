@@ -1,15 +1,20 @@
 from fastapi import FastAPI, Request
-import sys
+import uvicorn
 import os
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+from app.back.routers import google_ai_agent
+from app.back.routers import discord_graph
+from utils.google_utils.google_util import auth, spreadsheet_to_dataframe
+
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from models.discord_langgraph import get_discord_langgraph
+load_dotenv()
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
-from dto.dto import ChatbotRequestDTO, ChatbotResponseDTO
 
 # FastAPI 생명주기 관리
 @asynccontextmanager
@@ -23,51 +28,41 @@ async def lifespan(app: FastAPI):
 
 ####### FastAPI 서버 세팅 #######
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, title="WanteDash AI Agent server", vision="0.5.0")
 
-graph = get_discord_langgraph()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
 
-print(graph)
 
-@app.post("/api/chatbot")
-async def chatbot(request: ChatbotRequestDTO):
-    try:
-        print(request.question)
+@app.get("/")
+def init():
+    return RedirectResponse(url="/index.html")
 
-        # config = RunnableConfig(
-        #     recursion_limit=10,
-        #     configurable={"thread_id":"user1"}
-        # )
+@app.get("/jobs")
+def jobs():
+    creds = auth('./credentials.json')
+    ## .env 파일 ID 사용
+    spreadsheet_id = os.getenv('STANDARD_INFO_SPREADSHEET_ID')
+    worksheet_name = 'code'
+    df = spreadsheet_to_dataframe(creds,spreadsheet_id,worksheet_name)
+    return {
+        'jobs':df['업무'].to_list()
+    }
 
-        result = None
+# 라우터 등록
+app.include_router(google_ai_agent.google_router, prefix="/api", tags=["google"])
+app.include_router(discord_graph.discord_router, prefix="/api", tags=["discord"])
+print('static folder......')
+# static 등록
+# os.makedirs("static", exist_ok=True)
+app.mount("/", StaticFiles(directory="static"), name="static")
 
-        print("그래프 실행 시작")
-        # result = await graph.ainvoke({"messages": [HumanMessage(content=request.question)]}, config=config)
-        # for 대신 'async for'을 사용
-        async for event in graph.astream({"messages": [HumanMessage(content=request.question)]}, stream_mode="values"):
-            for key, value in event.items():
-                print("-"*30, key, "-"*30)
-
-                if key == "messages" and value:
-                    value[-1].pretty_print()
-                else:
-                    print(value)
-            result = event
-
-        print("그래프 실행 완료")
-        last_message = result['messages'][-1]
-        return ChatbotResponseDTO(
-            success=True,
-            message="200 OK",
-            data={
-                "answer": last_message.content,
-                "question": request.question
-            }
-        )
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return ChatbotResponseDTO(
-            success=False,
-            message=f"오류가 발생했습니다: {str(e)}",
-            data=None
-        )
+if __name__ == "__main__":
+    # Render는 PORT 환경변수를 제공
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

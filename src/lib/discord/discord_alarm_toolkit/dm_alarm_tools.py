@@ -84,22 +84,22 @@ class DMAlarmTool(BaseTool):
                         f"{DISCORD_API_URL}/channels/{dm_channel_id}/messages",
                         json={"content": alarm_message}
                     )
-                    results.append(f"✅ {user_mentions}님에게 DM을 성공적으로 보냈습니다.")
+                    results.append(f"Success: {user_mentions}님에게 DM을 성공적으로 보냈습니다.")
 
                 except discord.NotFound:
                     # 존재하지 않는 사용자일 경우
-                    error_message = f"❌ '{user_mentions}' 사용자를 찾을 수 없습니다."
+                    error_message = f"Error: '{user_mentions}' 사용자를 찾을 수 없습니다."
                     print(error_message)
                     results.append(error_message)
 
                 except discord.Forbidden:
                     # 봇이 DM을 보낼 수 없는
-                    error_message = f"❌ '{user_mentions}' 해당 사용자에게 DM을 보낼 수 없습니다. (사용자가 같은 서버에 있는지 확인해주세요.)"
+                    error_message = f"Error: '{user_mentions}' 해당 사용자에게 DM을 보낼 수 없습니다. (사용자가 같은 서버에 있는지 확인해주세요.)"
                     print(error_message)
                     results.append(error_message)
 
                 except Exception as e:
-                    error_message = f"❌ DM 전송 중 오류 발생 {e}"
+                    error_message = f"Error: DM 전송 중 오류 발생 {e}"
                     print(error_message)
                     results.append(error_message)
 

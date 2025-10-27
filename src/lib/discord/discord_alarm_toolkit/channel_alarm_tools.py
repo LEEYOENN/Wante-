@@ -73,22 +73,22 @@ class ChannelAlarmTool(BaseTool):
                 )
                 response.raise_for_status() # 오류 시 예외 발생
             # await channel.send(alarm_message)
-            return f"✅ '{channel_name}' 채널로 공지 알림을 성공적으로 보냈습니다."
+            return f"Success: '{channel_name}' 채널로 공지 알림을 성공적으로 보냈습니다."
         
         except discord.NotFound:
             # 존재하지 않는 사용자일 경우
-            error_message = f"❌ '{channel_name}' 채널을 찾을 수 없습니다."
+            error_message = f"Error: '{channel_name}' 채널을 찾을 수 없습니다."
             print(error_message)
             return error_message
 
         except discord.Forbidden:
             # 봇이 DM을 보낼 수 없는
-            error_message = f"❌ '{channel_name}' 해당 채널에 공지 알림을 보낼 수 없습니다. (권한이 있는지 확인해주세요.)"
+            error_message = f"Error: '{channel_name}' 해당 채널에 공지 알림을 보낼 수 없습니다. (권한이 있는지 확인해주세요.)"
             print(error_message)
             return error_message
 
         except Exception as e:
-            error_message = f"❌ 채널 공지 알림 전송 중 오류 발생 {e}"
+            error_message = f"Error: 채널 공지 알림 전송 중 오류 발생 {e}"
             print(error_message)
             return error_message
 
