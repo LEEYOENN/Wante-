@@ -23,13 +23,14 @@ from tools import (
 )
 
 # DB 경로 및 로깅 설정
-DB_PATH = "vectorstore/chromadb_rag"
-LOG_DB_PATH = "chat_logs.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "vectorstore/chromadb_rag")
+LOG_DB_PATH = os.path.join(BASE_DIR, "chat_logs.db")
 
 
 def setup_database():
     """Create the database and the 'chat_logs' table (if they don't already exist)."""
-    conn = sqlite3.connect(LOG_DB_PATH)
+    conn = sqlite3.connect(LOG_DB_PATH, timeout= 10)
     cursor = conn.cursor()
     cursor.execute(
         """
@@ -56,7 +57,7 @@ def log_chat(user_name, is_dm, question, answer, retrieved_docs, route):
     log_id = None  # 반환할 ID 초기화
 
     try:
-        conn = sqlite3.connect(LOG_DB_PATH)
+        conn = sqlite3.connect(LOG_DB_PATH, timeout= 10)
         cursor = conn.cursor()
 
         # Retrieved_docs (Document 객체 리스트)를 JSON 문자열로 변환

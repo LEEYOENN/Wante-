@@ -6,6 +6,9 @@ import os
 import tempfile
 from dotenv import load_dotenv
 
+from organization_agent import run_organization_agent
+from datetime import datetime
+
 from ingest_vectorize import process_pdf, MEDIA_SAVE_PATH, DB_PATH
 
 from langchain_chroma import Chroma
@@ -25,14 +28,14 @@ st.markdown("Discord 상담 내역을 확인하고, 지식을 관리합니다.")
 
 
 # 데이터 로드 함수
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10)
 def load_data():
     """Loading data from chat_logs.db"""
     if not os.path.exists(LOG_DB_PATH):
         return pd.DataFrame()
 
     try:
-        conn = sqlite3.connect(LOG_DB_PATH)
+        conn = sqlite3.connect(LOG_DB_PATH, timeout= 10)
         # 'route' 컬럼이 없을 수도 있는 초기 DB 호환
         table_info = pd.read_sql_query("PRAGMA table_info(chat_logs)", conn)
         if "route" not in table_info["name"].values:
@@ -59,6 +62,10 @@ def load_data():
         st.error(f"로그 DB 로드 실패: {e}")
         return pd.DataFrame()
 
+# Refresh Button
+if st.button("데이터 새로고침"):
+    st.cache_data.clear()
+    st.session_state["rerun_trigger"] = True
 
 df = load_data()
 
@@ -82,7 +89,8 @@ else:
     with col2:
         # Proportion by consultation type (pie chart)
         st.subheader("상담 유형별 비중")
-        if "route" in df.columns:
+             
+        if "route" in df.columns and not df["route"].empty:
             route_counts = df["route"].value_counts().reset_index()
             route_counts.columns = ["route", "count"]  # Plotly를 위한 컬럼명 변경
             # 1. Plotly 파이 차트 생성
@@ -152,7 +160,7 @@ if uploaded_file is not None:
         if not os.getenv("OPENAI_API_KEY"):
             st.error("오류: .env 파일에서 OPENAI_API_KEY를 찾을 수 없습니다.")
         else:
-            temp_pdf_path = None
+            temp_file_path = None
             final_new_documents = []
 
             try:
@@ -162,7 +170,7 @@ if uploaded_file is not None:
                     delete=False, suffix=file_suffix
                 ) as tmpfile:
                     tmpfile.write(uploaded_file.getvalue())
-                    temp_pdf_path = tmpfile.name
+                    temp_file_path = tmpfile.name
 
                 text_splitter = RecursiveCharacterTextSplitter(
                     chunk_size=1000,
@@ -173,7 +181,7 @@ if uploaded_file is not None:
                 if uploaded_file.type == "application/pdf":
                     st.info(f"'{uploaded_file.name}' PDF 파일 처리 중...(PyMUPDF)")
                     new_docs_raw = process_pdf(
-                        pdf_path=temp_pdf_path, media_save_dir=MEDIA_SAVE_PATH
+                        pdf_path=temp_file_path, media_save_dir=MEDIA_SAVE_PATH
                     )
                     text_docs = [
                         doc for doc in new_docs_raw if doc.metadata["type"] == "text"
@@ -217,5 +225,62 @@ if uploaded_file is not None:
                 st.error(f"파일 처리 중 오류 발생: {e}")
             finally:
                 # 임시 파일 삭제
-                if temp_pdf_path and os.path.exists(temp_pdf_path):
-                    os.remove(temp_pdf_path)
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+
+# Organization AI Agent : create a Report
+st.divider()
+st.header("Organization AI Agent (보고서 생성)")
+
+today = datetime.now().strftime('%Y-%m-%d')
+report_filename = f"{today}_weekly_report.md"
+report_task = f"""
+'chat_logs.db'에서 최근 7일간의 모든 로그를 가져와서,
+트렌드를 분석하고,
+그 결과를 '{report_filename}' 파일 이름으로 저장해줘..
+"""
+
+# Report save path
+REPORT_SAVE_PATH = "reports"
+report_file_path = os.path.join(REPORT_SAVE_PATH, report_filename)
+
+st.subheader("주간 상담 리포트 (최근 7일)")
+st.markdown(f"생성될 파일명: '{report_file_path}'")
+st.text_area("에이전트 작업 목표:", report_task, height= 150, disabled= True)
+
+# Create Report Button
+if st.button("주간 리포트 생성 시작", type= "primary"):
+    if run_organization_agent is None:
+        st.error("에이전트 실행 함수를 로드하지 못했습니다.")
+    else:
+        # Run Agent
+        with st.spinner(f"'Organization ai agent'가 로그를 분석하고 리포트를 작성 중입니다... (최대 1 ~ 2분 소요)"):
+            try:
+                final_agent_message = run_organization_agent(
+                    task_prompt= report_task,
+                    thread_id= f"streamlit_report_{today}"
+                )
+                st.success("에이전트 작업 완료!")
+                st.text_area("에이전트 최종 응답:", final_agent_message, height= 100)
+
+                # 리포트 파일 확인 및 다운로드 버튼 제공
+                if os.path.exists(report_file_path):
+                    st.info(f"'{report_file_path}'에서 생성된 파일을 찾았습니다.")
+
+                    with open(report_file_path, "r", encoding= "utf-8") as f:
+                        report_content = f.read()
+
+                    with st.expander("생성된 리포트 미리보기 (Markdown)"):
+                        st.markdown(report_content)
+
+                    st.download_button(
+                        label= "생성된 리포트(.md) 다운로드",
+                        data= report_content,
+                        file_name= report_filename,
+                        mime= "text/markdown"
+                    )
+                else:
+                    st.error(f"에이전트가 리포트 파일을 생성하지 못했습니다. (경로: {report_file_path})")
+
+            except Exception as e:
+                st.error(f"리포트 생성 중 오류 발생: {e}")

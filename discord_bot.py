@@ -75,7 +75,7 @@ class SatisfactionView(discord.ui.View):
 
     def update_satisfaction(self, log_id: int, score: int):
         try:
-            conn = sqlite3.connect(LOG_DB_PATH)
+            conn = sqlite3.connect(LOG_DB_PATH, timeout= 10)
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE chat_logs SET satisfaction = ? WHERE id = ?", (score, log_id)

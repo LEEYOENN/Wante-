@@ -72,7 +72,38 @@ def create_organization_agent():
     print("'Organization ai agent' Compilation complete.")
     return organization_agent
 
+def run_organization_agent(task_prompt: str, thread_id: str) -> str:
+    """Run the Organization Agent with the specified task_prompt and thread_id, and wait for it to finish. (For calling from Streamlit)"""
+    agent = create_organization_agent()
 
+    # Supervisor persona and task definition
+    initial_messages = [
+        SystemMessage(
+            content = """
+            You are an "Organization AI Agent" analyzing "WanteDash" logs.
+            You must use the given tools (@tools) step by step to complete the Supervisor's objectives.
+            Once all tools have been used and the final report has been saved, the task ends with a final report stating, "All tasks completed."
+            """
+        ),
+        HumanMessage(content= task_prompt),
+    ]
+
+    # Run agent
+    events = agent.stream(
+        {"messages": initial_messages},
+        config= {"recursion_limit": 10, "configurable": {"thread_id": thread_id}}
+    )
+
+    final_response_content = "The agent failed to generate a final response."
+
+    for event in events:
+        if "messages" in event:
+            event["messages"][-1].pretty_print()
+            final_response_content = event["messages"][-1].content
+    
+    return final_response_content
+                                               
+    
 # Running the main agent
 if __name__ == "__main__":
 
@@ -80,11 +111,16 @@ if __name__ == "__main__":
 
     # 'Goals' (prompts) to be given to agents
     today = datetime.now().strftime("%Y-%m-%d")
-    task = f"""
+    cli_task = f"""
     Retrieve all logs from the last seven days from 'chat_logs.db', analyze trends, and save the results to a file named '{today}_weekly_report.md'.
     """
 
-    print(f"\n--- [Goal delivery] ---\n{task}\n----------------------")
+    print(f"\n--- [Goal delivery] ---\n{cli_task}\n----------------------")
+
+    run_organization_agent(
+        task_prompt= cli_task,
+        thread_id= f"cli_task_{today}"
+    )
 
     # Run agent
     # SystemMassage defines the agent's identity/persona
@@ -102,7 +138,7 @@ if __name__ == "__main__":
          Your sole and final task is to respond to the user with just one line: "All tasks completed."
         """
         ),
-        HumanMessage(content=task),
+        HumanMessage(content=cli_task),
     ]
 
     events = agent.stream(

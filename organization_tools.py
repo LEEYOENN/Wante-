@@ -21,7 +21,7 @@ def get_chat_logs(days_ago: int = 7, route: str = None) -> str:
     """
     print(f"--- Tool: get_chat_logs (days_ago= {days_ago}, route= {route}) 실행 ---")
     try:
-        conn = sqlite3.connect(LOG_DB_PATH)
+        conn = sqlite3.connect(LOG_DB_PATH, timeout= 10)
 
         # Data Calculation
         start_date = (datetime.now() - timedelta(days=days_ago)).strftime(
