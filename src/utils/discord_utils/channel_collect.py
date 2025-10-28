@@ -15,14 +15,14 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    print(f"✅ Logged in as {client.user}")
+    print(f"Successfully Logged in as {client.user}")
     await client.wait_until_ready()
 
     guild = client.get_guild(int(DISCORD_SERVER_ID))
 
     # 서버를 찾았는지 확인
     if guild is None:
-        print(f"❌ 해당 서버를 찾을 수 없습니다.")
+        print("Error: 해당 서버를 찾을 수 없습니다.")
         await client.close()
         return
     

@@ -7,5 +7,7 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
 .env
+credentials.json
+src/app/back/token.json
