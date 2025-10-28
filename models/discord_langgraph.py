@@ -7,7 +7,7 @@ from langgraph.prebuilt.tool_node import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage, AIMessage
 import operator
 from langgraph.checkpoint.memory import MemorySaver
-from src.agent_tool.discord.discord_alarm_toolkit.discord_toolkit import DiscordAlarmToolkit
+from src.lib.discord.discord_alarm_toolkit.discord_toolkit import DiscordAlarmToolkit
 import sys
 import os
 from langgraph.graph.state import CompiledStateGraph
@@ -94,7 +94,7 @@ def get_discord_langgraph() -> CompiledStateGraph:
         "agent", route_agent, {'tools': 'tools', END: END}
     )
 
-    graph = graph_builder.compile()
+    graph = graph_builder.compile(checkpointer=memory)
     return graph
 
 

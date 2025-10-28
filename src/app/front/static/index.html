@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanteDash AI Agent</title>
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo">✨</div>
+                    <div class="logo-text">
+                        <h1>WanteDash Agent</h1>
+                        <p>AI Assistant</p>
+                    </div>
+                </div>
+                <button class="new-chat-btn" onclick="newChat()">
+                    <span>➕</span>
+                    <span>새 대화</span>
+                </button>
+            </div>
+
+            <div class="agent-selector">
+                <button id="agent-btn-submit" class="agent-btn active" onclick="selectAgent('submit', '/api/chatbot/submit')">
+                    <span>🧞</span> 제출 관련 업무용 Agent
+                </button>
+                <button id="agent-btn-alarm" class="agent-btn" onclick="selectAgent('alarm', '/api/chatbot/alarm')">
+                    <span>⏰</span> 알림 관련 업무용 Agent
+                </button>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="chat-history-title">최근 대화</div>
+                <div id="chatHistory">
+                    <div class="chat-item active">
+                        <span class="chat-item-icon">💬</span>
+                        <span class="chat-item-text">새로운 대화</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- <div class="sidebar-footer">
+                <button class="settings-btn" onclick="toggleSettings()">
+                    <span>⚙️</span>
+                    <span>설정</span>
+                </button>
+            </div> -->
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-title">
+                <div class="logo">🧞</div>
+                <div class="header-title">WanteDash AI Agent</div>
+                </div>
+                <div class="header-buttons">
+                    <button class="icon-btn" onclick="clearChat()" title="대화 초기화">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div class="settings-panel" id="settingsPanel">
+                <div class="setting-group">
+                    <label class="setting-label">API Key</label>
+                    <input type="password" class="setting-input" id="apiKey" placeholder="Google AI Studio API Key">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">모델 선택</label>
+                    <select class="setting-input" id="model">
+                        <option value="gemini-pro">Gemini Pro</option>
+                        <option value="gemini-pro-vision">Gemini Pro Vision</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area" id="chatArea">
+                <div class="chat-content" id="chatContent">
+                    <!-- Welcome Screen -->
+                    <div class="welcome" id="welcomeScreen">
+                        <div class="welcome-icon">🧞</div>
+                        <h2>WanteDash AI Agent</h2>
+                        <p>무엇을 도와드릴까요?</p>
+                        <div class="example-grid" id="welcomeGrid">
+                            <!--초기 정보 등록-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea 
+                        class="input-field" 
+                        id="messageInput" 
+                        placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+                        rows="5"
+                    ></textarea>
+                    <div class="file-wrapper">
+                        <label for="messageFile" class="file-label" id="messageLabel">📁 파일 선택</label>
+                        <input type="file" id="messageFile" disabled accept=".doc,.docx">
+                        <span class="file-name">선택된 파일 없음</span>
+                    </div>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        ➤
+                    </button>
+                    </div>
+                <div class="input-note">
+                    AI가 생성한 응답은 부정확할 수 있습니다. 중요한 정보는 반드시 확인해주세요.(파일은 마지막 등록한 파일만 처리합니다.)
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Toggle -->
+        <button class="mobile-toggle" onclick="toggleSidebar()">
+            ☰
+        </button>
+    </div>
+<script src="/scripts/basic.js"></script>
+<script src="/scripts/agent.js"></script>
+</body>
+</html>
