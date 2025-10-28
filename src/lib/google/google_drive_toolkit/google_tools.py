@@ -2,8 +2,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from typing import Type, Literal
+import os, sys
 from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from utils.google_utils.google_util import (
     MimeType, GResult,
     find, spreadsheet_to_dataframe, query, gnew,

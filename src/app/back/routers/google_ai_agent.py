@@ -1,22 +1,33 @@
-import os, shutil
+import os, shutil, sys
+from datetime import datetime
 from dotenv import load_dotenv
 from fastapi import APIRouter, UploadFile, Form, File
 from typing import Annotated, Optional
 from pydantic import BaseModel
+from pathlib import Path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 from models.general_agent import GeneralAgent #chat, reset_agent
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from utils.google_utils.google_util import auth
 from lib.google.prompts.prompt_generator import make_prompt
 from lib.google.prompts.system_prompt import GENERAL_PROMPT
 
+current_path = Path(__file__).resolve()
+PROJECT_ROOT = current_path.parent.parent.parent.parent.parent
+CREDENTIALS_FILE_PATH = PROJECT_ROOT / 'credentials.json'
+print(CREDENTIALS_FILE_PATH)
+
 google_router = APIRouter()
 
 load_dotenv()
+
 project_name = 'wanted_2nd_wantedash'
 os.environ['LANGSMITH_PROJECT'] = project_name
 UPLOAD_DIRECTORY = "./uploads"
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
-creds_file = './credentials.json'
+creds_file = CREDENTIALS_FILE_PATH
 creds = auth(creds_file)
 
 g_agent = GeneralAgent(creds,GENERAL_PROMPT.format(**make_prompt(creds)))
@@ -26,7 +37,7 @@ def reset():
     g_agent.reset_agent(GENERAL_PROMPT.format(**make_prompt(creds)))
     return {"result":"reset"}
 
-@google_router.post("/chat")
+@google_router.post("/chatbot/submit")
 async def for_student(
     id: Annotated[str, Form()],
     message: Annotated[str, Form()],
@@ -35,15 +46,17 @@ async def for_student(
     print(message)
     print(file)
     # 1. 파일 로컬에 저장
-    if file:
-        file_path = os.path.join(UPLOAD_DIRECTORY, file.filename)
-        print('****** file upload ******',file_path)
+    if file and file.filename:
+        _name, _ext = os.path.splitext(file.filename)
+        _filename = f'{_name}-{datetime.today().strftime("%Y%m%d%H%M-%f")}{_ext}'
+        _file_path = os.path.join(UPLOAD_DIRECTORY, _filename)
+        print('****** file upload ******',_file_path)
         try:
-        # file.file은 UploadFile 객체 내부의 실제 파일 스트림(file-like object)입니다.
-        # shutil.copyfileobj를 사용해 파일을 복사합니다.
-            with open(file_path, "wb") as fp:
+            ## 저장될 파일명은 기존 파일명에 "%Y%m%d%H%M-%f" 붙여 생성
+            # shutil.copyfileobj를 사용해 파일을 복사합니다.
+            with open(_file_path, "wb") as fp:
                 shutil.copyfileobj(file.file, fp)
-            message = f"{message}, 업로드 파일은 {file_path} 입니다."
+            message = f"{message}, 업로드 파일은 {_filename} 입니다."
         except Exception as e:
             print(f"message: 파일 업로드 중 오류 발생: {e}")
         finally:

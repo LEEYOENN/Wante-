@@ -20,7 +20,7 @@ height: 100vh;
 width: 280px;
 background: #111827;
 color: white;
-display: none;
+display: flex;
 flex-direction: column;
 border-right: 1px solid #1f2937;
 }
@@ -29,6 +29,42 @@ border-right: 1px solid #1f2937;
 padding: 1.5rem;
 border-bottom: 1px solid #1f2937;
 }
+
+/* === 에이전트 선택기 스타일 === */
+.agent-selector {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #1f2937
+}
+
+.agent-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* 다른 아이콘 버튼과 동일하게 */
+    width: 100%;
+    padding: 0.75rem; /* '새 대화' 버튼과 동일하게 */
+    border-radius: 8px; /* 다른 버튼들과 동일하게 */
+    background-color: transparent;
+    color: #9ca3af; /* 비활성 텍스트 색상 */
+    border: 1px solid #374151; /* '설정' 버튼과 동일하게 */
+    cursor: pointer;
+    font-size: 0.875rem; /* 채팅 목록 아이템과 동일하게 */
+    font-weight: 600; /* '새 대화' 버튼과 동일하게 */
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+}
+
+.agent-btn:hover {
+    background: #1f2937; /* 채팅 목록 호버와 동일하게 */
+    color: #fff;
+}
+
+.agent-btn.active {
+    background: #374151; /* 채팅 목록 활성화와 동일하게 */
+    color: #fff;
+    border-color: #374151;
+}
+
+/* ===================================== */
 
 .logo-container {
 display: flex;
@@ -567,7 +603,7 @@ background: #4b5563;
 
 /* Mobile Toggle */
 .mobile-toggle {
-display: none;
+display: flex;
 position: fixed;
 top: 10px;
 left: 220px;

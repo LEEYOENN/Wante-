@@ -94,7 +94,7 @@ def get_discord_langgraph() -> CompiledStateGraph:
         "agent", route_agent, {'tools': 'tools', END: END}
     )
 
-    graph = graph_builder.compile()
+    graph = graph_builder.compile(checkpointer=memory)
     return graph
 
 

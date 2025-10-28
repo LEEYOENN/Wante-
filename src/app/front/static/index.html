@@ -24,6 +24,15 @@
                 </button>
             </div>
 
+            <div class="agent-selector">
+                <button id="agent-btn-submit" class="agent-btn active" onclick="selectAgent('submit', '/api/chatbot/submit')">
+                    <span>🧞</span> 제출 관련 업무용 Agent
+                </button>
+                <button id="agent-btn-alarm" class="agent-btn" onclick="selectAgent('alarm', '/api/chatbot/alarm')">
+                    <span>⏰</span> 알림 관련 업무용 Agent
+                </button>
+            </div>
+
             <div class="sidebar-content">
                 <div class="chat-history-title">최근 대화</div>
                 <div id="chatHistory">

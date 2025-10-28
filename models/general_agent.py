@@ -1,4 +1,5 @@
-import os
+import os, sys
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_openai_tools_agent, AgentExecutor
@@ -7,8 +8,16 @@ from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.agents.output_parsers.tools import ToolAgentAction
 from typing import List, Dict
-from utils.google_utils.google_util import auth
-from lib.google.google_drive_toolkit.google_toolkit import GoogleToolkit
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+from src.utils.google_utils.google_util import auth
+from src.lib.google.google_drive_toolkit.google_toolkit import GoogleToolkit
+
+
+current_path = Path(__file__).resolve()
+PROJECT_ROOT = current_path.parent.parent
+CREDENTIALS_FILE_PATH = PROJECT_ROOT / 'credentials.json'
+print(CREDENTIALS_FILE_PATH)
 
 class GeneralAgent:
     def __init__(self, creds, system_prompt) -> None:
@@ -30,7 +39,7 @@ class GeneralAgent:
             ("placeholder","{agent_scratchpad}")  ## Agent 사용 결과 처리용?
         ])
         # tool
-        toolkit = GoogleToolkit(creds = auth('./credentials.json'))
+        toolkit = GoogleToolkit(creds = auth(CREDENTIALS_FILE_PATH))
         google_tools = toolkit.get_tools()
         # agent
         agent = create_openai_tools_agent(

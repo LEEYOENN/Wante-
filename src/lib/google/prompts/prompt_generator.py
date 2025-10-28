@@ -1,7 +1,8 @@
 from google.oauth2.credentials import Credentials
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from utils.google_utils.google_util import auth, spreadsheet_to_dataframe
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ job_prompt_template_and_upload = """
     {user_inputs}
     {total_len}.  **로컬 파일 패스** (업로드 할 MS 워드 로컬 파일을 파일선택 기능을 이용하여 업로드하세요)
 * **수행 작업 1 (파일 업로드):**
-    * `local_path`: [{total_len}번 항목으로 전달받은 경로]
+    * `local_path`: '{local_file_directory}/[{total_len}번 항목으로 전달받은 경로]'
     * `driver_path`: '{folder_name}/temp'
     * `upload_msword_to_drive` 툴에서 반환된 **'업로드 링크'**를 변수에 저장합니다.
 * **수행 작업 2 (시트 기록):**
@@ -29,8 +30,9 @@ job_prompt_template_and_upload = """
     * **[시트 기록 실행]**
         * `path_name`: '{folder_name}/{file_name}'
         * `sheet_name`: '{sheet_name}'
-        * `csv_string`: `[{csv_string}]` `[1 ~ {user_inputs_len}번 항목], [생성된 링크]` (총 {total_len}개 항목을 CSV 형식 문자열로 변환)
+        * `csv_string`: `[{csv_string}]` `[1 ~ {user_inputs_len}번 항목], [{total_len}번 항목으로 전달받은 경로]` (총 {total_len}개 항목을 CSV 형식 문자열로 변환)
 """
+
 
 def make_prompt(creds:Credentials):
     ## 설정 파일 ID
@@ -58,7 +60,8 @@ def make_prompt(creds:Credentials):
             'folder_name': folder_name,
             'file_name':file_name,
             'sheet_name': sheet_name,
-            'csv_string': csv_string
+            'csv_string': csv_string,
+            'local_file_directory':'./uploads'
         }
         
         if is_upload == 'Y':

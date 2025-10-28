@@ -2,6 +2,9 @@ let messages = [];
 let isLoading = false;
 let chatSessions = [];
 let currentSessionId = crypto.randomUUID();
+// ===== [추가] 현재 선택된 API 엔드포인트 =====
+// 기본값은 제출관련 업무 agent
+let currentApiEndpoint = 'http://localhost:8000/api/chatbot/submit'
 
 const chatArea = document.getElementById('chatArea');
 const chatContent = document.getElementById('chatContent');
@@ -40,7 +43,29 @@ function toggleSettings() {
     const panel = document.getElementById('settingsPanel');
     panel.classList.toggle('active');
 }
+// == 에이전트 선택 함수 ==
+function selectAgent(agentKey, apiEndpoint) {
+    // apiEndpoint 업데이트
+    currentApiEndpoint = `http://localhost:8000${apiEndpoint}`;
 
+    // 버튼 활성화 / 비활성화 처리
+    document.getElementById('agent-btn-submit').classList.remove('active');
+    document.getElementById('agent-btn-alarm').classList.remove('active')
+
+    if (agentKey === 'submit') {
+        document.getElementById('agent-btn-submit').classList.add('active');
+    }
+    else if (agentKey === 'alarm') {
+        document.getElementById('agent-btn-alarm').classList.add('active');
+    }
+    // (선택 사항) 에이전트를 바꾸면 새 대화로 시작
+    // 이 부분을 주석 처리하면 에이전트를 바꿔도 기존 대화가 유지됩니다.
+    newChat();
+
+    console.log(`Agent switched to: ${agentKey}, Endpoint: ${currentApiEndpoint}`);
+
+    
+}   
 // New Chat
 function newChat() {
     currentSessionId = Date.now();

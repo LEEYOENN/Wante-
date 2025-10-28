@@ -6,10 +6,10 @@ from langchain_core.runnables import RunnableConfig
 from fastapi.middleware.cors import CORSMiddleware
 from utils.google_utils.google_util import auth, spreadsheet_to_dataframe
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 from models.discord_langgraph import get_discord_langgraph
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from dto.dto import ChatbotRequestDTO, ChatbotResponseDTO
 
 discord_router = APIRouter()
@@ -18,22 +18,22 @@ graph = get_discord_langgraph()
 
 print(graph)
 
-@discord_router.post("/api/chatbot")
+@discord_router.post("/chatbot/alarm")
 async def chatbot(request: ChatbotRequestDTO):
     try:
         print(request.question)
 
-        # config = RunnableConfig(
-        #     recursion_limit=10,
-        #     configurable={"thread_id":"user1"}
-        # )
+        config = RunnableConfig(
+            recursion_limit=10,
+            configurable={"thread_id":"user1"}
+        )
 
         result = None
 
         print("그래프 실행 시작")
         # result = await graph.ainvoke({"messages": [HumanMessage(content=request.question)]}, config=config)
         # for 대신 'async for'을 사용
-        async for event in graph.astream({"messages": [HumanMessage(content=request.question)]}, stream_mode="values"):
+        async for event in graph.astream({"messages": [HumanMessage(content=request.question)]}, stream_mode="values", config=config):
             for key, value in event.items():
                 print("-"*30, key, "-"*30)
 

@@ -43,6 +43,7 @@ function toggleFileUpload(data){
 async function sendMessage() {
     const message = messageInput.value.trim();
     if (!message || isLoading) return;
+
     const timestamp = getCurrentTime();
     const userMsg = { role: 'user', content: message, timestamp };
     
@@ -66,38 +67,75 @@ async function sendMessage() {
     sendBtn.innerHTML = '⏳';
     showLoading();
     
-    // 폼 데이터 생성
-    const formData = new FormData();
-    formData.append("id",currentSessionId);
-    formData.append("message", message);
-    // 선택한 파일중 마지막 파일 등록, 파일 등록이 필수 일 경우만 전송
-    if(is_fileupload & messageFile.files.length > 0)
-        formData.append("file", messageFile.files[0]);
-        messageFile.value = null;
-        fileNameSpan.textContent = '선택된 파일 없음';
-    // console.log('***** form data *****')
-    // console.log(formData)
+    // api 엔드 포인트에 따라 요청 옵션을 분리
+    let fetchOptions;
+
+    if (currentApiEndpoint.includes('api/chatbot/alarm')) {
+        // Alarm 에이전트는 json 형식으로 전송
+        const jsonData = {
+            question: message
+        };
+
+        fetchOptions = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(jsonData)
+        };
+    } else {
+        // 폼 데이터 생성
+        const formData = new FormData();
+
+        formData.append("id",currentSessionId);
+        formData.append("message", message);
+
+        // 선택한 파일중 마지막 파일 등록, 파일 등록이 필수 일 경우만 전송
+        if(is_fileupload & messageFile.files.length > 0)
+            formData.append("file", messageFile.files[0]);
+            messageFile.value = null;
+            fileNameSpan.textContent = '선택된 파일 없음';
+        // console.log('***** form data *****')
+        // console.log(formData)
+
+        fetchOptions = {
+            method: 'POST',
+            body: formData
+            // FormData는 headers를 자동으로 설정합니다.
+        };
+    }
+
 
     //함수호출
     try {
-        const response = await fetch('http://localhost:8000/api/chat', {
-            method: 'POST',
-            body: formData,
-            // headers: {
-            //     'Content-Type': 'application/json',
-            // },
-            // body: JSON.stringify({
-            //     message: message
-            // })
-        });
+        const response = await fetch(currentApiEndpoint, fetchOptions);
+
         const data = await response.json();
         console.log("***** result *****")
         console.log(data);
-        hideLoading();        
+        hideLoading();
+        
+        // 서버 응답에 맞춰서 AI 응답 처리
+        let aiResponse = '';
+        if (data.data && data.data.answer) {
+            aiResponse = data.data.answer;
+        } else if (data.output) {
+            aiResponse = data.output;
+        } else {
+            aiResponse = '응답 형식을 처리할 수 없습니다.';
+        }
+
         const aiTimestamp = getCurrentTime();
-        addMessageToUI('assistant', data.output, aiTimestamp);
-        messages.push({ role: 'assistant', content: data.output, timestamp: aiTimestamp });
-        toggleFileUpload(data);
+        addMessageToUI('assistant',  aiResponse, aiTimestamp);
+        messages.push({ role: 'assistant', content: aiResponse, timestamp: aiTimestamp });
+        
+        if (data.output) {
+            toggleFileUpload(data);
+        } else {
+            toggleFileUpload({output: ''});// '로컬 파일'이 없는 응답으로 처리
+        }
+        
+
     } catch (error) {
         console.error('Error:', error);
         hideLoading();

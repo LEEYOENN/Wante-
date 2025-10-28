@@ -16,6 +16,7 @@ class GoogleToolkit(BaseToolkit):
     
     def get_tools(self) -> List[BaseTool]:
         return [
+            NewSpreadsheet(creds=self.creds),
             AppendSpreadSheet(creds=self.creds),
             UploadMSWordFile(creds=self.creds)
         ]
