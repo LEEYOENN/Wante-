@@ -177,7 +177,7 @@ class WanteDashBot(discord.Client):
             # Rag 라우트 일 때만 미디어 버튼 전송
             media_view = None
             if route == "rag":
-                retrieved_docs = final_state.get("context", [])
+                retrieved_docs = final_state.get("context") or []
                 relevant_media_paths = []
 
                 for doc in retrieved_docs:
@@ -207,7 +207,7 @@ class WanteDashBot(discord.Client):
                 is_dm=is_dm,
                 question=question,
                 answer=text_answer,
-                retrieved_docs=final_state.get("context", []),
+                retrieved_docs=final_state.get("context") or [],
                 route=route,
             )
             # og_chat이 방금 INSERT된 ID를 반환하도록 수정

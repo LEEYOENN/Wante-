@@ -20,12 +20,14 @@ from tools import (
     create_rag_chain,
     create_counseling_chain,
     create_chit_chat_chain,
+    create_question_rewriter_chain
 )
 
 # DB 경로 및 로깅 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "vectorstore/chromadb_rag")
 LOG_DB_PATH = os.path.join(BASE_DIR, "chat_logs.db")
+CACHE_DB_PATH = os.path.join(BASE_DIR, "vectorstore/chromadb_cache")
 
 
 def setup_database():
@@ -43,13 +45,27 @@ def setup_database():
         answer TEXT NOT NULL,
         retrieved_context TEXT,
         route TEXT NOT NULL,  -- [신규] 어떤 라우터로 처리되었는지 기록 (rag, counseling, chit_chat)
-        satisfaction INTEGER DEFAULT 0 -- [신규] 만족도 (0: N/A, 1: 유용, -1: 개선 필요)
+        satisfaction INTEGER DEFAULT 0, -- [신규] 만족도 (0: N/A, 1: 유용, -1: 개선 필요)
+        processed_for_cache INTEGER DEFAULT 0
     )
     """
     )
+
+    try:
+        cursor.execute("PRAGMA table_info(chat_logs)")
+        columns = [col[1] for col in cursor.fetchall()]
+
+        if 'processed_for_cache' not in columns:
+            print("-> [DB 마이그레이션] 'processed_for_cache' 컬럼을 기존 chat_logs DB에 추가합니다.")
+            cursor.execute("ALTER TABLE chat_logs ADD COLUMN processed_for_cache INTEGER DEFAULT 0")
+    
+    except sqlite3.OperationalError:
+        # 테이블이 방금 생성되어 PRAGMA가 바로 작동 안 할 경우 등 예외 처리
+        pass
+
     conn.commit()
     conn.close()
-    print(f"-> 로그 DB '{LOG_DB_PATH}' 준비 완료.")
+    print(f"-> 로그 DB '{LOG_DB_PATH}' 준비 완료.(캐시 라벨링 컬럼 포함)")
 
 
 def log_chat(user_name, is_dm, question, answer, retrieved_docs, route):
@@ -111,18 +127,76 @@ def create_langgraph_chain():
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
+    # RAG retriever
     if not os.path.exists(DB_PATH):
         raise FileNotFoundError(f"Not found vectorDB. '{DB_PATH}' Check your location")
 
-    vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embedding)
-    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 5})
+    rag_vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embedding)
+    rag_retriever = rag_vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
+    # Semantic Cache retriever
+    cache_retriever = None
+    if os.path.exists(CACHE_DB_PATH):
+        print(f"-> Semantic DB ({CACHE_DB_PATH}) 로드 중...")
+        try: 
+            cache_vectorstore = Chroma(
+                persist_directory= CACHE_DB_PATH,
+                embedding_function= embedding
+            )
+            if cache_vectorstore.get(limit= 1)['ids']:
+                print(f"-> Semantic DB 로드 완료. (문서 {len(cache_vectorstore.get()['ids'])} 개 발견")
+            # [핵심] DB가 비어있는 지 확인합니다.
+            # .get(limit=1)['ids']가 비어있지 않아야 (문서가 1개라도 있어야) 리트리버를 생성합니다.
+                cache_retriever = cache_vectorstore.as_retriever(
+                    search_type= "similarity_score_threshold",
+                    search_kwargs= {'score_threshold': 0.95, "k": 1}
+                )            
+            else:
+                print(f"-> [경고] Semantic DB ({CACHE_DB_PATH})를 찾을 수 없습니다. 캐시 기능을 건너뜁니다.")
+        except Exception as e:
+            # 예: DB 파일 손상
+            print(f"[오류] Semantic DB 로드 중 오류 발생: {e}. 캐시 기능을 건너뜁니다.")
+    else:
+        print(f"-> [경고] 'Semantic DB' ({CACHE_DB_PATH})를 찾을 수 없습니다. 캐시 기능을 건너뜁니다.")
+
+    question_rewriter_tool = create_question_rewriter_chain(llm)
     question_router_tool = create_router_chain(llm)
     rag_answer_tool = create_rag_chain(llm)
     counseling_tool = create_counseling_chain(llm)
     chit_chat_tool = create_chit_chat_chain(llm)
 
     # 그래프 노드 함수 정의
+    # Cache Check Node
+    def cache_check_node(state: GraphState, config: RunnableConfig):
+        """
+        [0 tokens] The first node in the graph. Check the Semantic DB first.
+        """
+        print("--- Node: cache_check_node ---")
+
+        # 캐시 리트리버가 로드되지 않았으면 (DB 파일 없음) 건너뛰기
+        if cache_retriever is None:
+            print("-> 'Semantic DB'가 없거나 비어있어 캐시를 건너뜁니다. 'router'로 이동.")
+            question = state["messages"][-1].content
+            return {"route": "continue", "question": question}
+        
+        question = state["messages"][-1].content
+
+        # [토큰 0원] Semantic DB 검색
+        cached_docs = cache_retriever.invoke(question, config)
+
+        if cached_docs:     # cache Hit! (유사도 95% 이상)
+            print(f"-> [Cache Hit] 유사 질문 발견! Semantic DB에서 답변을 반환합니다.")
+            cached_answer = cached_docs[0].metadata['answer']
+            return {
+                "answer": cached_answer,
+                "route": "cache",        # cache route로 END
+                "messages": [("ai", cached_answer)]
+            }
+        else:       # cache miss
+            print("-> [Cache Miss] Semantic DB에 일치하는 항목 없음. route로 이동.")
+            return {"route": "continue", "question": question}      # continue 라우트로 route
+        
+
     # Router Node
     def router_question(state: GraphState, config: RunnableConfig):
         print("--- Node: route_question ---")
@@ -143,14 +217,33 @@ def create_langgraph_chain():
     # RAG Node
     def rag_node(state: GraphState, config: RunnableConfig):
         print("--- Node: rag_node ---")
-        question = state["question"]
+        print("-> 질문 재구성 중...")
+        messages = state["messages"]
+        original_question = state["question"]
+
+        question_to_use = ""
+
+        if len(messages) > 1:
+            print("-> 대화 기록 발견. 질문 재구성 중...")
+
+            rewritten_question = question_rewriter_tool.invoke(
+                {"messages": messages}, config
+                )
+            print(f"-> 원본 질문: {state['question']}")
+            print(f"-> 재구성 된 질문: {rewritten_question}")
+            question_to_use = rewritten_question
+        else:
+            print("-> 1. 첫 질문. 질문 재구성을 건너뜁니다.")
+            question_to_use = original_question
 
         # Search for context
-        context_docs = retriever.invoke(question, config)
+        print(f"-> '{question_to_use}' (으)로 문서 검색...")
+        context_docs = rag_retriever.invoke(question_to_use, config)
 
         # Creatr RAG answer
+        print(f"-> RAG 답변 생성...")
         answer = rag_answer_tool.invoke(
-            {"question": question, "context": context_docs}, config
+            {"question": question_to_use, "context": context_docs}, config
         )
 
         return {"context": context_docs, "answer": answer, "messages": [("ai", answer)]}
@@ -177,8 +270,9 @@ def create_langgraph_chain():
     # Chit_chat Node
     def chit_chat_node(state: GraphState, config: RunnableConfig):
         print("--- Node: chit_chat_node ---")
-        question = state["question"]
-        answer = chit_chat_tool.invoke({"question": question}, config)
+        # question = state["question"]
+        response = chit_chat_tool.invoke({"messages": state["messages"]}, config)
+        answer = response
         return {"answer": answer, "messages": [("ai", answer)]}
 
     # Graph Assemble
@@ -186,15 +280,28 @@ def create_langgraph_chain():
     workflow = StateGraph(GraphState)
 
     # Add NODE
+    workflow.add_node("cache_checker", cache_check_node)
     workflow.add_node("router", router_question)
     workflow.add_node("rag_agent_node", rag_node)
     workflow.add_node("counseling_agent_node", counseling_node)
     workflow.add_node("chit_chat_agent_node", chit_chat_node)
 
     # Set Entry Point
-    workflow.set_entry_point("router")
+    workflow.set_entry_point("cache_checker")
 
-    # Set Conditional Edges
+    # Set Conditional Edge for cache_checker
+    # cache (Hit) -> END
+    # continue(Miss) -> router
+    workflow.add_conditional_edges(
+        "cache_checker",
+        lambda state: state["route"],
+        {
+            "cache": END,
+            "continue": "router",
+        }
+    )
+
+    # Set Conditional Edges for route
     workflow.add_conditional_edges(
         "router",
         lambda state: state["route"],
@@ -231,22 +338,17 @@ if __name__ == "__main__":
     langgraph_chain = create_langgraph_chain()  # creat graph
 
     # Test 1. RAG
-    print("\n--- [TEST 1. RAG] ---")
-    inputs = {"messages": [("user", "2회 중도 포기 패널티 뭐야?")]}
-    config = {"configurable": {"thread_id": "test-rag"}}  # Thread ID (in memory)
-    for event in langgraph_chain.stream(inputs, config=config):
-        print(event)
+    print("\n--- [TEST 1. Cache Hit] ---")
+    config_1 = {"configurable": {"thread_id": "test-cache-hit"}} 
+    inputs_1 = {"messages": [("user", "2회 중도 포기 패널티 뭐야?")]}       # 95% 이상 유사한 질문
+    for event in langgraph_chain.stream(inputs_1, config=config_1):
+        if "cache_checker" in event:
+            print(event)        # cache_checker가 cache 라우트를 반환해야 함
+        if "answer" in event.get("cache_checker", {}):      
+            print(f"-> CACHED ANSWER: {event['cache_checker']['answer']}")
 
-    # Test 2. Counseling
-    print("\n--- [TEST 2. Counseling] ---")
-    inputs = {"messages": [("user", "IT 업계 취업하고 싶은데 전망이 어때?")]}
-    config = {"configurable": {"thread_id": "test-counseling"}}
-    for event in langgraph_chain.stream(inputs, config=config):
-        print(event)
-
-    # Test 3. Chit-chat
-    print("\n--- [TEST 3. Chit-chat] ---")
-    inputs = {"messages": [("user", "ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ")]}
-    config = {"configurable": {"thread_id": "test-chitchat"}}
-    for event in langgraph_chain.stream(inputs, config=config):
-        print(event)
+    print("\n--- [TEST 2. Cache Miss & RAG] ---")
+    inputs_2 = {"messages": [("user", "훈련 장려금은 언제 지급되나요?")]}       # 캐시에 없는 질문
+    config_2 = {"configurable": {"thread_id": "test-cache-miss"}} 
+    for event in langgraph_chain.stream(inputs_2, config=config_2):
+        print(event)        # cache_checker -> route -> rag_agent_node 순서로 실행되어야 함

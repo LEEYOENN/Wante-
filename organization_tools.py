@@ -103,3 +103,47 @@ def save_report_to_markdown(report_content: str, filename: str) -> str:
         return f"Report saved successfully: {file_path}"
     except Exception as e:
         return f"An error occurred while saving the file: {e}"
+
+@tool
+def refine_qa_for_cache(question: str, answer: str) -> str:
+    """
+    (캐시 구축 스크립트 전용)
+    LLM을 사용해 주어진 Q&A 쌍을 분석하여 Semantic Cache에 저장할 가치가 있는지 평가합니다.
+    - Q&A가 고품질이고, 완전하며, 재사용 가능하면 '정제된 답변'을 반환합니다.
+    - Q&A가 저품질(예: 농담, 단순 인사, 불완전)이면 'REJECT' 문자열을 반환합니다.
+    """
+    print(f"---Tool: refine_qa_for_cache (Q: {question[:30]}...) ---")
+
+    try:
+        refine_llm = ChatOpenAI(model= "gpt-4o-mini", temperature= 0)
+        prompt = ChatPromptTemplate.from_template(
+            """당신은 'Semantic Cache 품질 관리자'입니다.
+            주어진 '질문'과 '답변' 쌍이 "모범 답안"으로 캐시에 저장될 가치가 있는지 평가해야 합니다.
+
+            [평가 기준]
+            1.  **유용한가?**: 질문과 답변이 실제 정보를 포함하고 있습니까?
+                (예: "결석 규정" -> "20%입니다...") -> OK
+            2.  **부적절하지 않은가?**: 단순 인사, 감사, 농담, 비속어가 아닙니까?
+                (예: "ㅋㅋㅋ" -> "ㅋㅋㅋ", "고마워요" -> "도움이 되어 기뻐요") -> REJECT
+            3.  **완결성이 있는가?**: 답변이 그 자체로 완전한 의미를 가집니다.
+                (예: "네, 맞아요.") -> REJECT
+                (예: "네, 결석은 20%까지 가능합니다.") -> OK
+
+            [지시 사항]
+            - 위 기준을 통과하면, 캐시로 저장하기에 적합한 '답변' 내용을 그대로 (또는 살짝 다듬어서) 반환하세요.
+            - 위 기준을 하나라도 통과하지 못하면, 오직 'REJECT' 라는 단어 하나만 반환하세요.
+
+            ---
+            [질문]: {question}
+            [답변]: {answer}
+            ---
+            [평가 결과 (답변 또는 REJECT)]:
+            """
+        )
+        refine_chain = prompt | refine_llm | StrOutputParser()
+
+        return refine_chain.invoke({"question": question, "answer": answer})
+    
+    except Exception as e:
+        print(f"[Error] refine_qa_for_cache 실행 중 오류: {e}")
+        return "REJECT"
