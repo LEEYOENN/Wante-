@@ -134,26 +134,26 @@ class GetUnsubmitReportTargets(BaseTool):
         except Exception as e:
             return {"error": f"보고서 미제출 목록 생성 중 오류 발생: {e}"}
         
-# --- 실행 코드 ---
-if __name__ == "__main__":
-    print("Google API 인증을 시작합니다...")
-    try:
-        # 1. Google 인증 (google_util.py의 auth 함수 사용)
-        # credentials.json 파일이 같은 위치에 있어야 함
-        creds = auth(CREDENTIALS_FILE_PATH)
-        print("인증 성공!")
+# # --- 실행 코드 ---
+# if __name__ == "__main__":
+#     print("Google API 인증을 시작합니다...")
+#     try:
+#         # 1. Google 인증 (google_util.py의 auth 함수 사용)
+#         # credentials.json 파일이 같은 위치에 있어야 함
+#         creds = auth(CREDENTIALS_FILE_PATH)
+#         print("인증 성공!")
 
-        # 2. 'getFormattedDailySchedule' 툴 테스트
-        print("\n--- 1. 스케줄 알림 툴 테스트 ---")
-        schedule_tool = getFormattedDailySchedule(creds=creds)
-        schedule_result = schedule_tool._run()
-        print("결과:", schedule_result)
+#         # 2. 'getFormattedDailySchedule' 툴 테스트
+#         print("\n--- 1. 스케줄 알림 툴 테스트 ---")
+#         schedule_tool = getFormattedDailySchedule(creds=creds)
+#         schedule_result = schedule_tool._run()
+#         print("결과:", schedule_result)
 
-        # 3. 'GetUnsubmitReportTargets' 툴 테스트
-        print("\n--- 2. 보고서 미제출 툴 테스트 ---")
-        report_tool = GetUnsubmitReportTargets(creds=creds)
-        report_result = report_tool._run()
-        print("결과:", report_result)
+#         # 3. 'GetUnsubmitReportTargets' 툴 테스트
+#         print("\n--- 2. 보고서 미제출 툴 테스트 ---")
+#         report_tool = GetUnsubmitReportTargets(creds=creds)
+#         report_result = report_tool._run()
+#         print("결과:", report_result)
 
-    except Exception as e:
-        print(f"\n[오류] 테스트 실행 중 오류 발생: {e}")
+#     except Exception as e:
+#         print(f"\n[오류] 테스트 실행 중 오류 발생: {e}")
