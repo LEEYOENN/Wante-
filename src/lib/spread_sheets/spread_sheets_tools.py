@@ -7,6 +7,7 @@ import pandas as pd
 import os, sys
 from pathlib import Path
 from google.oauth2.credentials import Credentials
+import textwrap
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from utils.google_utils.google_util import spreadsheet_to_dataframe, GResult, MimeType, mkfile, auth
@@ -21,7 +22,6 @@ class getFormattedDailySchedule(BaseTool):
     """오늘의 스케줄, 프리핑 내용을 '알림용 메시지'로 포맷팅하여 가져올 때 사용합니다."""
     name: str = "get_formatted_daily_schedule_for_discord_alarm"
     description: str = "Gets today's schedule, and formatted as a JSON payload for discord channel alarm tool."
-    args_schema: Type[BaseModel] = BaseModel
 
     # 도구 초기화 시 필요한 객체
     creds: Credentials = Field(description="Google API Credentials")
@@ -62,22 +62,22 @@ class getFormattedDailySchedule(BaseTool):
 
                 # 오늘 스케줄을 모두 알림 메시지로 변환
                 for _, row in today_task.iterrows():
-                    channels.append(row[self.ALARM_CHANNEL_NAME])
+                    channels.append(str(row[self.ALARM_CHANNEL_NAME]).strip())
 
-                    task_title = row[self.TASK_COLUMN_NAME]
+                    task_title = str(row[self.TASK_COLUMN_NAME]).strip()
                     task_detail = ""
                     
                     if self.TASK_DETAIL_COLUMN_NAME in row and  pd.notna(row[self.TASK_DETAIL_COLUMN_NAME]):
-                        task_detail = row[self.TASK_DETAIL_COLUMN_NAME]
+                        task_detail = str(row[self.TASK_DETAIL_COLUMN_NAME]).strip()
 
-                    message_lines = [f"###{today_str} 오늘 일정 알림"]
+                    message_lines = [f"### {today_str} 오늘 일정 알림"]
                     message_lines.append(f"\n- **{task_title}**")
                     if task_detail:
                         message_lines.append(f"\n\n> {task_detail}")
 
                     full_message = "\n".join(message_lines)
 
-                    messages.append(full_message)
+                    messages.append(textwrap.dedent(full_message))
                 
                 result = {"channel_names": channels, "contents": messages}
                 return result
@@ -90,7 +90,6 @@ class GetUnsubmitReportTargets(BaseTool):
     """discord dm_alarm_tools 도구의 입력값으로 바로 사용할 수 있는 Json 객체를 반환합니다."""
     name: str = "get_unsubmit_report_targets"
     description: str = "Gets a users who missed project reports, and formatted as a JSON payload for a discord dm alarm tool."
-    args_schema: Type[BaseModel] = BaseModel
 
     creds: Credentials = Field(description="Google API Credentials")
 
@@ -133,7 +132,10 @@ class GetUnsubmitReportTargets(BaseTool):
         
         except Exception as e:
             return {"error": f"보고서 미제출 목록 생성 중 오류 발생: {e}"}
-        
+
+
+
+
 # # --- 실행 코드 ---
 # if __name__ == "__main__":
 #     print("Google API 인증을 시작합니다...")

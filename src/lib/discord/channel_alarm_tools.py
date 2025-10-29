@@ -16,8 +16,8 @@ DISCORD_API_URL = "https://discord.com/api/v10"
 # 채널로 공지 알림 보내기
 # 1-1 채널로 전체 알림을 보내는 스키마 설정
 class ChannelAlarm(BaseModel):
-    channel_name: List[str] = Field(description = "The name list of the Discord channel to which announcement notifications will be sent. For example, ['공지', '일반'] This name is retrieved from a CSV file registered in the system.")
-    content: List[str] = Field(description = "The actual message (announcement) list to be sent to the channel. May include Markdown format.")
+    channel_names: List[str] = Field(description = "The name list of the Discord channel to which announcement notifications will be sent. For example, ['공지', '일반'] This name is retrieved from a CSV file registered in the system.")
+    contents: List[str] = Field(description = "The actual message (announcement) list to be sent to the channel. May include Markdown format.")
 
 # 1-2 채널로 전체 공지 알림을 보내는 도구 생성
 class ChannelAlarmTool(BaseTool):

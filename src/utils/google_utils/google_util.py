@@ -12,7 +12,6 @@ from googleapiclient.http import MediaFileUpload
 
 SCOPES = [
     "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/spreadsheets"
 ]
 
 ## 인증 처리 함수
