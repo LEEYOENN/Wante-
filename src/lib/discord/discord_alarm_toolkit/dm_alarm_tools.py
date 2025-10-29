@@ -2,7 +2,7 @@
 from typing import List, Type
 import discord
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import pandas as pd
 import textwrap
 import httpx
@@ -16,13 +16,19 @@ DISCORD_API_URL = "https://discord.com/api/v10"
 # dm 알림 보내기
 # 1-1 DM으로 알림을 보내는 스키마 설정
 class DMAlarm(BaseModel):
-    user_names: List[str] 
-    content: str
+    user_names: List[str] = Field(description="A list of Discord usernames to send DMs to. Example: ['user1', 'gemini_helper']. These names must exist in a CSV file registered with the system.") 
+    content: str = Field(description="The actual message (notice) to be sent to the user via DM. May include Markdown format.")
 
 # 1-2 DM으로 알림을 보내는 도구 생성
 class DMAlarmTool(BaseTool):
     name: str = "discord_dm_alarm"
-    description: str = "DM을 전송할 사용자 Discord name을 리스트로 받아 개인으로 DM으로 공지 알림을 보냅니다."
+    description: str = (
+    "Sends a DM (private message) to a specific Discord user."
+    "This tool retrieves user names from a predefined CSV file."
+    "You can only send messages to users listed in this file."
+    "Use this when sending announcements, notifications, reminders, etc."
+    "I need to extract the username and the content."
+    )
     args_schema: Type[BaseModel] = DMAlarm
 
     # 동기 메서드는 사용하지 않음
@@ -86,15 +92,17 @@ class DMAlarmTool(BaseTool):
                     )
                     results.append(f"Success: {user_mentions}님에게 DM을 성공적으로 보냈습니다.")
 
-                except discord.NotFound:
-                    # 존재하지 않는 사용자일 경우
-                    error_message = f"Error: '{user_mentions}' 사용자를 찾을 수 없습니다."
-                    print(error_message)
-                    results.append(error_message)
-
-                except discord.Forbidden:
-                    # 봇이 DM을 보낼 수 없는
-                    error_message = f"Error: '{user_mentions}' 해당 사용자에게 DM을 보낼 수 없습니다. (사용자가 같은 서버에 있는지 확인해주세요.)"
+                except httpx.HTTPStatusError as e:  
+                    if e.response.status_code == 404:
+                        # 404: Not Found (사용자를 찾을 수 없음)
+                        error_message = f"Error: '{user_mentions}' 사용자를 찾을 수 없습니다. (ID: {user_id_int})"
+                    elif e.response.status_code == 403:
+                        # 403: Forbidden (DM을 보낼 수 없음)
+                        error_message = f"Error: '{user_mentions}' 해당 사용자에게 DM을 보낼 수 없습니다. (봇이 사용자와 같은 서버에 없거나, 사용자가 DM을 차단했을 수 있습니다.)"
+                    else:
+                        # 기타 HTTP 오류
+                        error_message = f"Error: HTTP 오류 발생 (사용자: {user_mentions}): {e}"
+                    
                     print(error_message)
                     results.append(error_message)
 

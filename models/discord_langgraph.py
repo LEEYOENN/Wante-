@@ -7,13 +7,12 @@ from langgraph.prebuilt.tool_node import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage, AIMessage
 import operator
 from langgraph.checkpoint.memory import MemorySaver
-from src.lib.discord.discord_alarm_toolkit.discord_toolkit import DiscordAlarmToolkit
 import sys
 import os
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "./")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+from src.lib.discord.discord_alarm_toolkit.discord_toolkit import DiscordAlarmToolkit
 
 
 def get_discord_langgraph() -> CompiledStateGraph:
