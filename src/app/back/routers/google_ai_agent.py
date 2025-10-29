@@ -5,8 +5,11 @@ from fastapi import APIRouter, UploadFile, Form, File
 from typing import Annotated, Optional
 from pydantic import BaseModel
 from pathlib import Path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
-from models.general_agent import GeneralAgent #chat, reset_agent
+
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
+)
+from models.general_agent import GeneralAgent  # chat, reset_agent
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from utils.google_utils.google_util import auth
@@ -15,33 +18,35 @@ from lib.google.prompts.system_prompt import GENERAL_PROMPT
 
 current_path = Path(__file__).resolve()
 PROJECT_ROOT = current_path.parent.parent.parent.parent.parent
-CREDENTIALS_FILE_PATH = PROJECT_ROOT / 'credentials.json'
+CREDENTIALS_FILE_PATH = PROJECT_ROOT / "credentials.json"
 print(CREDENTIALS_FILE_PATH)
 
 google_router = APIRouter()
 
 load_dotenv()
 
-project_name = 'wanted_2nd_wantedash'
-os.environ['LANGSMITH_PROJECT'] = project_name
+project_name = "wanted_2nd_wantedash"
+os.environ["LANGSMITH_PROJECT"] = project_name
 UPLOAD_DIRECTORY = "./uploads"
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 creds_file = CREDENTIALS_FILE_PATH
 creds = auth(creds_file)
 
-g_agent = GeneralAgent(creds,GENERAL_PROMPT.format(**make_prompt(creds)))
+g_agent = GeneralAgent(creds, GENERAL_PROMPT.format(**make_prompt(creds)))
+
 
 @google_router.get("/reset")
 def reset():
     g_agent.reset_agent(GENERAL_PROMPT.format(**make_prompt(creds)))
-    return {"result":"reset"}
+    return {"result": "reset"}
+
 
 @google_router.post("/chatbot/submit")
 async def for_student(
     id: Annotated[str, Form()],
     message: Annotated[str, Form()],
-    file: Annotated[Optional[UploadFile], File()] = None
+    file: Annotated[Optional[UploadFile], File()] = None,
 ):
     print(message)
     print(file)
@@ -50,7 +55,7 @@ async def for_student(
         _name, _ext = os.path.splitext(file.filename)
         _filename = f'{_name}-{datetime.today().strftime("%Y%m%d%H%M-%f")}{_ext}'
         _file_path = os.path.join(UPLOAD_DIRECTORY, _filename)
-        print('****** file upload ******',_file_path)
+        print("****** file upload ******", _file_path)
         try:
             ## 저장될 파일명은 기존 파일명에 "%Y%m%d%H%M-%f" 붙여 생성
             # shutil.copyfileobj를 사용해 파일을 복사합니다.
@@ -63,7 +68,7 @@ async def for_student(
             file.file.close()
     # 2. 메시지에 추가 : '로컬 파일 경로' 는 '저장된 파일 패스' 입니다.
     ## 세션 처리 방법 고민 필요 -> 클라이언트에서 생성하여 전송
-    cfg = {"configurable" : {"session_id" : id}}
-    result = g_agent.chat(message,cfg)
+    cfg = {"configurable": {"session_id": id}}
+    result = g_agent.chat(message, cfg)
     print(result)
     return result
