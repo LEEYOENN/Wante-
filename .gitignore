@@ -11,3 +11,4 @@ wheels/
 .env
 credentials.json
 src/app/back/token.json
+token.json

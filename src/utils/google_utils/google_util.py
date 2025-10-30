@@ -10,14 +10,23 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
-SCOPES = ["https://www.googleapis.com/auth/drive"]
-## 인증 처리
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+]
+
+## 인증 처리 함수
 def auth(credentials_file:str) -> Credentials:
-    """Authentication processing and saving token file to local folder"""
+    """Google API를 사용하기 위한 사용자 인증을 처리합니다.
+    token.json 파일이 있는지 확인합니다. 있다면 유효하고, 없거나 만료되었다면
+    credentials.json 을 사용해 사용자에게 브라우저를 통한 로그인을 요청합니다.
+    로그인에 성공하면 새로운 인증 정보를 token.json 파일로 저장하고 
+    Credentials 객체를 반환합니다."""
     creds : Credentials | None = None
+
     # creds: Optional[Credentials] = None
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    
     # 유효한 인증 정보가 없으면, 사용자에게 로그인을 요청
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -25,14 +34,16 @@ def auth(credentials_file:str) -> Credentials:
         else:
             flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
             creds = flow.run_local_server(port=0)
+        
         # 다음 실행을 위해 인증 정보를 저장합니다.
         with open("token.json", "w") as token:
             token.write(creds.to_json())
+    
     return creds
 
 def spreadsheet_to_dataframe(creds:Credentials, spreadsheet_id, sheet_name):
     """
-    스프레드시트의 데이터 읽어 DataFrame 생성
+    스프레드시트ID로 스프레드시트의 데이터 읽어 DataFrame 생성
     """
     df = pd.DataFrame()
     try:
@@ -48,6 +59,7 @@ def spreadsheet_to_dataframe(creds:Credentials, spreadsheet_id, sheet_name):
     return df
 
 class MimeType(Enum):
+    """복잡한 문자열 대신 Enum을 사용해 코드를 읽기 쉽게 만드는 helper 클래스"""
     all = 'all'
     spreadsheet =   'application/vnd.google-apps.spreadsheet'  # Google Sheets
     folder =        'application/vnd.google-apps.folder'       # Google Drive Folder
@@ -57,6 +69,8 @@ class MimeType(Enum):
     ms_excel_old =  'application/vnd.ms-excel'                 #xls file
     
 def query(mtype:MimeType, name: str, folder_id: str | None = None) -> str:
+    """Google Drive API에서 파일을 검색할 때 사용하는 검색 쿼리 문자열을 동적으로 생성"""
+    
     if mtype == MimeType.all:
         mime_type = ' or mimeType='.join([f"'{mtype.value}'" for mtype in MimeType if mtype != MimeType.all])
         query = f"name = '{name}' and " + \
@@ -72,6 +86,7 @@ def query(mtype:MimeType, name: str, folder_id: str | None = None) -> str:
 
 GRESULT_TYPE = Literal["success", "fail", "exception", "error"]
 class GResult(BaseModel):
+    """API 호출 결과를 항상 result, message, id, file, link를 포함하는 GResult 객체 하기 위한 클래스"""
     result : GRESULT_TYPE = Field(...,description='api doing result')
     message : str = Field(...,description='result message')
     id : str | None = Field(default=None, description='file or folder id')
