@@ -50,13 +50,17 @@ function selectAgent(agentKey, apiEndpoint) {
 
     // 버튼 활성화 / 비활성화 처리
     document.getElementById('agent-btn-submit').classList.remove('active');
-    document.getElementById('agent-btn-alarm').classList.remove('active')
+    document.getElementById('agent-btn-alarm').classList.remove('active');
+    document.getElementById('agent-btn-rag').classList.remove('active');
 
     if (agentKey === 'submit') {
         document.getElementById('agent-btn-submit').classList.add('active');
     }
     else if (agentKey === 'alarm') {
         document.getElementById('agent-btn-alarm').classList.add('active');
+    }
+    else if (agentKey === 'rag') {
+        document.getElementById('agent-btn-rag').classList.add('active');
     }
     // (선택 사항) 에이전트를 바꾸면 새 대화로 시작
     // 이 부분을 주석 처리하면 에이전트를 바꿔도 기존 대화가 유지됩니다.
