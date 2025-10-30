@@ -70,7 +70,7 @@ async function sendMessage() {
     // api 엔드 포인트에 따라 요청 옵션을 분리
     let fetchOptions;
 
-    if (currentApiEndpoint.includes('api/chatbot/alarm')) {
+    if (currentApiEndpoint.includes('api/chatbot/alarm') || currentApiEndpoint.includes('api/chatbot/rag')) {
         // Alarm 에이전트는 json 형식으로 전송
         const jsonData = {
             question: message

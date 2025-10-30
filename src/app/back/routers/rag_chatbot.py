@@ -3,16 +3,9 @@ from langchain_core.runnables import RunnableConfig
 import sys
 import os
 
-# Import to teo's RAG
-# 경로가 src/lib/rag/ 로 변경되었으므로 sys.path 설정
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 from src.lib.rag.rag_core import create_langgraph_chain, setup_database
-
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from dto.dto import ChatbotRequestDTO, ChatbotResponseDTO
 
 rag_router = APIRouter()
@@ -31,7 +24,7 @@ except Exception as e:
 async def chatbot(request: ChatbotRequestDTO):
     if langgraph_chain is None:
         return ChatbotResponseDTO(
-            success=False, message="RAG 챗봇이 로드되지 않았습니다.", data=None
+            success=False, message="500 RAG 챗봇이 로드되지 않았습니다.", data=None
         )
 
     try:

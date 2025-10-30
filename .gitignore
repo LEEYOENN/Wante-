@@ -10,5 +10,5 @@ wheels/
 .venv/
 .env
 credentials.json
-src/app/back/token.json"token.json" 
+src/app/back/token.json
 token.json

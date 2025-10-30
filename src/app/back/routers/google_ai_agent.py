@@ -48,7 +48,7 @@ async def for_student(
     message: Annotated[str, Form()],
     file: Annotated[Optional[UploadFile], File()] = None,
 ):
-    print(message)
+    #print(message)
     print(file)
     # 1. 파일 로컬에 저장
     if file and file.filename:

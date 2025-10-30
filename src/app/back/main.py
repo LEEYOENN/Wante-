@@ -55,11 +55,6 @@ def init():
     return RedirectResponse(url="/index.html")
 
 
-# @app.get("/agent")
-# def init():
-#     return RedirectResponse(url="/agent.html")
-
-
 @app.get("/jobs")
 def jobs():
     creds = auth(CREDENTIALS_FILE_PATH)

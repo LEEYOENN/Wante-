@@ -199,8 +199,8 @@ def vectorize_documents(all_docs, db_url):
 
 # 메인 실행
 if __name__ == "__main__":
-    TEST_PDF_FILE = "FAQ.pdf"
-    full_pdf_path = os.path.join(PDF_SOURCE_DIR, TEST_PDF_FILE)
+    # TEST_PDF_FILE = "FAQ.pdf"
+    full_pdf_path = PDF_SOURCE_DIR + '/FAQ.pdf'
 
     # 테스트용 PDF 파일이 있는 지 확인
     if not os.path.exists(full_pdf_path):

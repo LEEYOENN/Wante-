@@ -7,14 +7,20 @@ from langgraph.prebuilt.tool_node import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage, AIMessage
 import operator
 from langgraph.checkpoint.memory import MemorySaver
-from src.lib.discord.discord_alarm_toolkit.discord_toolkit import DiscordAlarmToolkit
 import sys
 import os
+from pathlib import Path
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+from src.lib.discord.discord_toolkit import DiscordAlarmToolkit
+from src.lib.spread_sheets.spread_sheets_toolkit import SpreadSheetsToolkit
+from src.utils.google_utils.google_util import auth
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "./")))
-
+current_path = Path(__file__).resolve()
+PROJECT_ROOT = current_path.parent.parent
+CREDENTIALS_FILE_PATH = PROJECT_ROOT / 'credentials.json'
+print(CREDENTIALS_FILE_PATH)
 
 def get_discord_langgraph() -> CompiledStateGraph:
 
@@ -30,6 +36,10 @@ def get_discord_langgraph() -> CompiledStateGraph:
     discord_toolkit = DiscordAlarmToolkit()
     discord_tools = discord_toolkit.get_tools()
 
+    spread_sheets_toolkit = SpreadSheetsToolkit(creds=auth(CREDENTIALS_FILE_PATH))
+    spread_sheets_tools = spread_sheets_toolkit.get_tools()
+
+    tools = discord_tools + spread_sheets_tools
     # 모델 세팅
 
     llm_agent = ChatOpenAI(
@@ -37,7 +47,7 @@ def get_discord_langgraph() -> CompiledStateGraph:
     temperature=0
     )
 
-    agent_chatbot = llm_agent.bind_tools(tools=discord_tools)
+    agent_chatbot = llm_agent.bind_tools(tools=tools)
 
     # 메모리 생성
     memory = MemorySaver()
@@ -46,9 +56,22 @@ def get_discord_langgraph() -> CompiledStateGraph:
 
     # 에이전트 노드
     agent_system = """
-    당신은 사용자의 요청에 따라 Discord 알림을 전송하는 AI 어시스턴트입니다.
-    당신의 임무는 사용자의 요구사항을 분석하여 '개인 DM 알림' 또는 '채널 전체 공지' 중 적절한 도구를 선택하고,
-    도구 사용 시 필요한 모든 정보를 수집하여 도구를 호출하는 것입니다.
+    당신은 사용자의 요청에 따라 Google Sheets 조회 후 데이터 포매팅 및 Discord 알림을 전송 하는 AI 어시스턴트입니다.
+
+    당신의 임무는 사용자의 요구사항을 분석하고, 다음 두 단계에 따라 행동하는 것입니다.
+
+    [1단계: 데이터 수집(필요한 경우만)]
+    - 사용자가 "오늘 스케줄", "보고서 미제출" 등 데이터 조회가 필요한 요청을 하면,
+    먼저 'get_formatted_daily_schedule' 또는 'get_unsubmit_report_targets' 도구를 호출해야 합니다.
+    - 이 도구들은 Discord 알림에 필요한 JSON(데이터)를 반환합니다.
+
+    [2단계: 알림 전송]
+    - (만약 1단계에서 데이터를 받아 온 경우) 1단계 도구가 반환한 JSON 데이터를 
+    'discord_channel_alarm' 또는 'discord_dm_alarm' 도구의 입력으로 사용하여 알림을 전송해야 합니다.
+    ** 단순하게 데이터 조회가 필요 없는 알림 요청만을 한다면, 1단계를 건너뛰고 바로 'discord_channel_alarm'
+    또는 'discord_dm_alarm' 도구를 호출합니다.
+
+    모든 작업이 완료 되었다면 최종 결과를 보고합니다.
     """
     
     async def agent_node(state: State) -> State:
@@ -65,7 +88,7 @@ def get_discord_langgraph() -> CompiledStateGraph:
         return {**state, "messages": [answer], 'status': "acting"}
     
     # 도구 노드
-    tool_node = ToolNode(tools=discord_tools)
+    tool_node = ToolNode(tools=tools)
 
     # 그래프 빌더 생성
     graph_builder = StateGraph(State)
@@ -96,5 +119,9 @@ def get_discord_langgraph() -> CompiledStateGraph:
 
     graph = graph_builder.compile(checkpointer=memory)
     return graph
+
+# if __name__ == "__main__":
+#     graph = get_discord_langgraph()
+#     print(graph)
 
 

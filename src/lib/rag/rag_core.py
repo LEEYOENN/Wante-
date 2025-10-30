@@ -9,7 +9,6 @@ from typing import TypedDict, Annotated, List
 from langgraph.graph import StateGraph, END
 from langgraph.graph import add_messages
 from langgraph.checkpoint.sqlite import SqliteSaver
-
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_postgres import PGVector
@@ -149,12 +148,12 @@ def create_langgraph_chain():
     #     raise FileNotFoundError(f"Not found vectorDB. '{DB_PATH}' Check your location")
 
     if not DB_URL:
-        raise ValueError("[오류] .env 파일에 DATABASE_URL이 설정되지 않았습니다.")
+        raise ValueError("[오류] .env 파일에 DB_URL이 설정되지 않았습니다.")
 
     try:
         rag_vectorstore = PGVector(
             connection=DB_URL,
-            embedding_function=embedding,
+            embeddings=embedding,
             collection_name="rag_documents",
         )
         rag_retriever = rag_vectorstore.as_retriever(
@@ -170,8 +169,8 @@ def create_langgraph_chain():
     print(f"-> Semantic DB 로드 중...")
     try:
         cache_vectorstore = PGVector(
-            persist_directory=DB_URL,
-            embedding_function=embedding,
+            connection=DB_URL,
+            embeddings=embedding,
             collection_name="semantic_cache",
         )
         # if cache_vectorstore.get(limit=1)["ids"]:
