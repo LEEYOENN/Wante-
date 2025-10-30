@@ -12,6 +12,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_chroma import Chroma
+from langchain_postgres import PGVector
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -29,10 +30,12 @@ from .tools import (
 current_path = Path(__file__).resolve()
 PROJECT_ROOT = current_path.parent.parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
-
-DB_PATH = str(DATA_DIR / "vectorstore/chromadb_rag")
 LOG_DB_PATH = str(DATA_DIR / "chat_logs.db")
-CACHE_DB_PATH = str(DATA_DIR / "vectorstore/chromadb_cache")
+DB_URL = os.getenv("DB_URL")
+
+# DB_PATH = str(DATA_DIR / "vectorstore/chromadb_rag")
+# LOG_DB_PATH = str(DATA_DIR / "chat_logs.db")
+# CACHE_DB_PATH = str(DATA_DIR / "vectorstore/chromadb_cache")
 
 # BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # DB_PATH = os.path.join(BASE_DIR, "vectorstore/chromadb_rag")
@@ -142,43 +145,59 @@ def create_langgraph_chain():
     embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
     # RAG retriever
-    if not os.path.exists(DB_PATH):
-        raise FileNotFoundError(f"Not found vectorDB. '{DB_PATH}' Check your location")
+    # if not os.path.exists(DB_PATH):
+    #     raise FileNotFoundError(f"Not found vectorDB. '{DB_PATH}' Check your location")
 
-    rag_vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embedding)
-    rag_retriever = rag_vectorstore.as_retriever(
-        search_type="similarity", search_kwargs={"k": 5}
-    )
+    if not DB_URL:
+        raise ValueError("[오류] .env 파일에 DATABASE_URL이 설정되지 않았습니다.")
+
+    try:
+        rag_vectorstore = PGVector(
+            connection=DB_URL,
+            embedding_function=embedding,
+            collection_name="rag_documents",
+        )
+        rag_retriever = rag_vectorstore.as_retriever(
+            search_type="similarity", search_kwargs={"k": 5}
+        )
+        print("-> RAG DB 로드 완료.")
+    except Exception as e:
+        raise Exception(f"RAG DB 'rag_documents' 컬렉션 연결 실패: {e}")
 
     # Semantic Cache retriever
     cache_retriever = None
-    if os.path.exists(CACHE_DB_PATH):
-        print(f"-> Semantic DB ({CACHE_DB_PATH}) 로드 중...")
-        try:
-            cache_vectorstore = Chroma(
-                persist_directory=CACHE_DB_PATH, embedding_function=embedding
-            )
-            if cache_vectorstore.get(limit=1)["ids"]:
-                print(
-                    f"-> Semantic DB 로드 완료. (문서 {len(cache_vectorstore.get()['ids'])} 개 발견"
-                )
-                # [핵심] DB가 비어있는 지 확인합니다.
-                # .get(limit=1)['ids']가 비어있지 않아야 (문서가 1개라도 있어야) 리트리버를 생성합니다.
-                cache_retriever = cache_vectorstore.as_retriever(
-                    search_type="similarity_score_threshold",
-                    search_kwargs={"score_threshold": 0.95, "k": 1},
-                )
-            else:
-                print(
-                    f"-> [경고] Semantic DB ({CACHE_DB_PATH})를 찾을 수 없습니다. 캐시 기능을 건너뜁니다."
-                )
-        except Exception as e:
-            # 예: DB 파일 손상
-            print(f"[오류] Semantic DB 로드 중 오류 발생: {e}. 캐시 기능을 건너뜁니다.")
-    else:
-        print(
-            f"-> [경고] 'Semantic DB' ({CACHE_DB_PATH})를 찾을 수 없습니다. 캐시 기능을 건너뜁니다."
+    # if os.path.exists(CACHE_DB_PATH):
+    print(f"-> Semantic DB 로드 중...")
+    try:
+        cache_vectorstore = PGVector(
+            persist_directory=DB_URL,
+            embedding_function=embedding,
+            collection_name="semantic_cache",
         )
+        # if cache_vectorstore.get(limit=1)["ids"]:
+        #     print(
+        #         f"-> Semantic DB 로드 완료. (문서 {len(cache_vectorstore.get()['ids'])} 개 발견"
+        #     )
+        #     # [핵심] DB가 비어있는 지 확인합니다.
+        #     # .get(limit=1)['ids']가 비어있지 않아야 (문서가 1개라도 있어야) 리트리버를 생성합니다.
+        cache_retriever = cache_vectorstore.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={"score_threshold": 0.95, "k": 1},
+        )
+        print(f"-> Semantic DB (PGVector) 로드 완료.")
+        # else:
+        # print(
+        #     f"-> [경고] Semantic DB ({CACHE_DB_PATH})를 찾을 수 없습니다. 캐시 기능을 건너뜁니다."
+        # )
+    # except Exception as e:
+    #     # 예: DB 파일 손상
+    #     print(f"[오류] Semantic DB 로드 중 오류 발생: {e}. 캐시 기능을 건너뜁니다.")
+    # else:
+    #     print(
+    #         f"-> [경고] 'Semantic DB' ({CACHE_DB_PATH})를 찾을 수 없습니다. 캐시 기능을 건너뜁니다."
+    #     )
+    except Exception as e:
+        print(f"[경고] Semantic DB (PGVector) 로드 실패: {e}. 캐시 기능을 건너뜁니다.")
 
     question_rewriter_tool = create_question_rewriter_chain(llm)
     question_router_tool = create_router_chain(llm)

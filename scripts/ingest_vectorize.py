@@ -7,12 +7,17 @@ load_dotenv()
 from langchain_core.documents import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
+
+# from langchain.vectorstores import Chroma
+from langchain_postgres import PGVector
 
 # 기본 경로 설정
 PDF_SOURCE_DIR = "../data/source_documents"
 MEDIA_SAVE_PATH = "../data/media_assets"
-DB_PATH = "../data/vectorstore/chromadb_rag"
+# DB_PATH = "../data/vectorstore/chromadb_rag"
+DB_URL = os.getenv("DB_URL")
+if not DB_URL:
+    print("[오류] .env 파일에 DB_URL 설정되지 않았습니다.")
 
 
 # PyMUPDF로 PDF 처리
@@ -142,7 +147,7 @@ def process_pdf(pdf_path, media_save_dir):
 
 
 # LangChain으로 분할 및 벡터화
-def vectorize_documents(all_docs, db_path):
+def vectorize_documents(all_docs, db_url):
     """Recieve a list of documents, split the text, and store it in ChromaDB"""
     if not all_docs:
         print("[오류] 벡터화 할 문서가 없습니다.")
@@ -163,7 +168,7 @@ def vectorize_documents(all_docs, db_path):
     final_documents = text_chunks + media_docs
 
     # ChromaDB에 저장
-    print(f"\n--- 총 {len(final_documents)} 개의 문서를 벡터 DB에 저장합니다. ---")
+    print(f"\n--- 총 {len(final_documents)} 개의 문서를 PGVector DB에 저장합니다. ---")
 
     # OpenAI API 키가 있는 지 확인
     if not os.getenv("OPENAI_API_KEY"):
@@ -173,18 +178,23 @@ def vectorize_documents(all_docs, db_path):
     embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
     # DB가 이미 있다면 삭제 (테스트를 위해 매번 새로 생성)
-    if os.path.exists(db_path):
-        print(f"기존 DB({db_path})를 삭제합니다.")
-        import shutil
+    # if os.path.exists(db_path):
+    #     print(f"기존 DB({db_path})를 삭제합니다.")
+    #     import shutil
 
-        shutil.rmtree(db_path)
+    #     shutil.rmtree(db_path)
 
-    vectorstore = Chroma.from_documents(
-        documents=final_documents, embedding=embedding, persist_directory=db_path
+    collection_name = "rag_documents"
+
+    PGVector.from_documents(
+        documents=final_documents,
+        embedding=embedding,
+        connection=db_url,
+        collection_name=collection_name,
+        pre_delete_collection=True,
     )
 
-    print(f"벡터 DB 저장 완료! (경로: {db_path})")
-    return vectorstore
+    print(f"벡터 DB 저장 완료! (Collection: {collection_name})")
 
 
 # 메인 실행
@@ -201,4 +211,4 @@ if __name__ == "__main__":
         documents = process_pdf(pdf_path=full_pdf_path, media_save_dir=MEDIA_SAVE_PATH)
 
         if documents:
-            vectorize_documents(documents, DB_PATH)
+            vectorize_documents(documents, DB_URL)
