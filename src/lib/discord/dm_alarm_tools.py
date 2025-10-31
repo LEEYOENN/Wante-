@@ -5,6 +5,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 import pandas as pd
 import textwrap
+import datetime
 import httpx
 from dotenv import load_dotenv
 import os
@@ -64,18 +65,26 @@ class DMAlarmTool(BaseTool):
                 user_id_int = int(user_id)
                 user_mentions = f"<@{user_id_int}>"
                 try:
-
-                    alarm_message = textwrap.dedent(f"""
-                    # 📢 Potenup 공지 알림
-                    ## 📝 알림 내용
-                    {content}
-
-                    --------------------------------
-
-                    **👤 알림 대상**
-                    {user_mentions}
-
-                    """)
+                    main_message = f"{user_mentions}님, 새로운 공지사항이 도착했습니다.\n# ✨ Potenup 공지 알림\n\n## 📌 공지 내용 \n{content}\n\n"
+                    embed_payload = {
+                        "content": main_message,
+                        "embeds": [
+                            {
+                                "color": 0x5865F2, # 10진수 5793266 (디스코드 블루)
+                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                "fields": [                                    
+                                    {
+                                        "name": "🧑‍💻 알림 대상\n",
+                                        "value": user_mentions,
+                                        "inline": False
+                                    }
+                                ],
+                                "footer": {
+                                    "text": "Potenup"
+                                }
+                            }
+                        ]
+                    }
                     
                     # 사용자에게 DM 보낼 채널 생성
                     dm_channel_response = await client.post(
@@ -88,7 +97,7 @@ class DMAlarmTool(BaseTool):
                     # 생성된 DM 채널에 메시지 전송
                     await client.post(
                         f"{DISCORD_API_URL}/channels/{dm_channel_id}/messages",
-                        json={"content": alarm_message}
+                        json=embed_payload #{"content": alarm_message}
                     )
                     results.append(f"Success: {user_mentions}님에게 DM을 성공적으로 보냈습니다.")
 

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WanteDash AI Agent</title>
+    <link rel="icon" type="image/png" href="/images/dash.png">
     <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
@@ -12,7 +13,7 @@
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo-container">
-                    <div class="logo">✨</div>
+                    <div class="logo">⚡</div>
                     <div class="logo-text">
                         <h1>WanteDash Agent</h1>
                         <p>AI Assistant</p>
@@ -40,8 +41,8 @@
                 <div class="chat-history-title">최근 대화</div>
                 <div id="chatHistory">
                     <div class="chat-item active">
-                        <span class="chat-item-icon">💬</span>
-                        <span class="chat-item-text">새로운 대화</span>
+                        <span class="chat-item-icon">⏳</span>
+                        <span class="chat-item-text">로딩중 ... ⏳</span>
                     </div>
                 </div>
             </div>
@@ -87,16 +88,16 @@
 
             <!-- Chat Area -->
             <div class="chat-area" id="chatArea">
-                <div class="chat-content" id="chatContent">
-                    <!-- Welcome Screen -->
-                    <div class="welcome" id="welcomeScreen">
-                        <div class="welcome-icon">🧞</div>
-                        <h2>WanteDash AI Agent</h2>
-                        <p>무엇을 도와드릴까요?</p>
-                        <div class="example-grid" id="welcomeGrid">
-                            <!--초기 정보 등록-->
-                        </div>
+                <!-- Welcome Screen -->
+                <div class="welcome" id="welcomeScreen">
+                    <div class="welcome-icon">🧞</div>
+                    <h2>WanteDash AI Agent</h2>
+                    <p>무엇을 도와드릴까요?</p>
+                    <div class="example-grid" id="welcomeGrid">
+                        <!--초기 정보 등록-->
                     </div>
+                </div>
+                <div class="chat-content" id="chatContent">
                 </div>
             </div>
             <!-- Input Area -->
@@ -127,6 +128,8 @@
             ☰
         </button>
     </div>
+<script src="/scripts/fetch_func.js"></script>
+<script src="/scripts/util.js"></script>
 <script src="/scripts/basic.js"></script>
 <script src="/scripts/agent.js"></script>
 </body>
