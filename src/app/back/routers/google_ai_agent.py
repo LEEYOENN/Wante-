@@ -5,16 +5,16 @@ from fastapi import APIRouter, UploadFile, Form, File
 from typing import Annotated, Optional
 from pydantic import BaseModel
 from pathlib import Path
+from langchain_core.messages import AIMessage, HumanMessage
 
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 from models.general_agent import GeneralAgent  # chat, reset_agent
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 from utils.google_utils.google_util import auth
 from lib.google.prompts.prompt_generator import make_prompt
 from lib.google.prompts.system_prompt import GENERAL_PROMPT
+from utils.postgres_utils.postgresql_memory import get_session_history
 
 current_path = Path(__file__).resolve()
 PROJECT_ROOT = current_path.parent.parent.parent.parent.parent
@@ -41,6 +41,22 @@ def reset():
     g_agent.reset_agent(GENERAL_PROMPT.format(**make_prompt(creds)))
     return {"result": "reset"}
 
+@google_router.get("/messages/{id}")
+def messages(id:str):
+    print(id)
+    history = get_session_history(session_id=id)
+    results = []
+    for message in history:
+        results.append(
+            {
+                'type':'AI' if isinstance(message, AIMessage) else 'HUMAN' if isinstance(message, HumanMessage) else 'BASE',
+                'content': message.content,
+                'conversation_id': message.conversation_id,
+                'created_at': message.created_at
+            }
+        )
+    # print(results)
+    return {"result":results}
 
 @google_router.post("/chatbot/submit")
 async def for_student(

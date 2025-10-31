@@ -70,14 +70,14 @@ class getFormattedDailySchedule(BaseTool):
                     if self.TASK_DETAIL_COLUMN_NAME in row and  pd.notna(row[self.TASK_DETAIL_COLUMN_NAME]):
                         task_detail = str(row[self.TASK_DETAIL_COLUMN_NAME]).strip()
 
-                    message_lines = [f"### {today_str} 오늘 일정 알림"]
+                    message_lines = [f"## {today_str} 오늘 일정 알림"]
                     message_lines.append(f"\n- **{task_title}**")
                     if task_detail:
-                        message_lines.append(f"\n\n> {task_detail}")
+                        message_lines.append(f"\n {task_detail}")
 
                     full_message = "\n".join(message_lines)
 
-                    messages.append(textwrap.dedent(full_message))
+                    messages.append(full_message)
                 
                 result = {"channel_names": channels, "contents": messages}
                 return result
@@ -126,7 +126,16 @@ class GetUnsubmitReportTargets(BaseTool):
                         if row[member]:
                             target_members.append(row[member])
 
-                message = f"{month}월 프로젝트 보고서를 미제출 하셨습니다.\n제출 부탁 드립니다.😊"   
+                message = textwrap.dedent(f"""
+                📋 **{month}월 프로젝트 보고서 미제출 안내**
+
+                안녕하세요! 👋
+                {month}월 프로젝트 보고서가 아직 제출되지 않았습니다.
+
+                ⏰ 빠른 시일 내에 제출 부탁드립니다.
+
+                궁금한 점이 있으시면 언제든 연락주세요! 😊
+                """)
                 result = {"user_names": target_members, "content": message}
                 return result
         

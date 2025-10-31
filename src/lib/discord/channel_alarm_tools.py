@@ -7,7 +7,8 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 import textwrap
-import httpx    
+import httpx
+import datetime
 
 load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
@@ -74,20 +75,30 @@ class ChannelAlarmTool(BaseTool):
                     user_mentions = "@everyone"
                     # 만약 Forbidden 에러가 발생한다면, 봇에게 'Send Messages'와 'Mention Everyone, Here, and All Roles' 권한이 없는 것
 
-                    alarm_message = textwrap.dedent(f"""
-                    # 📢 Potenup 공지 알림
-                    ## 📝 알림 내용                                       
-                    {content}
-
-                    --------------------------------
-
-                    **👤 알림 대상**
-                    {user_mentions}
-                    """)
+                    main_message = f"{user_mentions}님, 새로운 공지사항이 도착했습니다.\n# ✨ Potenup 공지 알림\n\n## 📌 공지 내용 \n{content}\n\n"
+                    embed_payload = {
+                        "content": main_message,
+                        "embeds": [
+                            {
+                                "color": 0x5865F2, # 10진수 5793266 (디스코드 블루)
+                                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                "fields": [                                    
+                                    {
+                                        "name": "🧑‍💻 알림 대상\n",
+                                        "value": user_mentions,
+                                        "inline": False
+                                    }
+                                ],
+                                "footer": {
+                                    "text": "Potenup"
+                                }
+                            }
+                        ]
+                    }
 
                     response = await client.post(
                         f"{DISCORD_API_URL}/channels/{channel_id_int}/messages",
-                        json={"content": alarm_message}
+                        json=embed_payload# {"content": alarm_message}
                     )
                     response.raise_for_status() # 오류 시 예외 발생
             
