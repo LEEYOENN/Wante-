@@ -1,10 +1,13 @@
 import os
+from dotenv import load_dotenv
 from langchain.schema import BaseMessage, HumanMessage, AIMessage
 from langchain.memory.chat_message_histories.sql import BaseMessageConverter
 from sqlalchemy import Column, Integer, String, Text, DateTime, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import func
 from langchain_community.chat_message_histories import SQLChatMessageHistory
+
+load_dotenv()
 
 # 1. SQLAlchemy 모델 정의
 Base = declarative_base()
