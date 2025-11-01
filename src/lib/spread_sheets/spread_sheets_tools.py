@@ -34,12 +34,10 @@ class getFormattedDailySchedule(BaseTool):
 
     def _run(self) -> Dict[List[str], List[str]]:
         try:
-            month = datetime.now().strftime("%m")
+            month = str(datetime.now().month)
             SCHEDULE_FILE_PATH = f"wantedash/포텐업_스케줄"
             SCHEDULE_SHEET_NAME = f"{month}월_스케줄"
 
-            today_str = datetime.now().strftime("%Y/%m/%d")
-            
             # 스케줄 파일을 찾기
             file_result = mkfile(self.creds, SCHEDULE_FILE_PATH, MimeType.spreadsheet)
             if not file_result.id:
@@ -50,8 +48,21 @@ class getFormattedDailySchedule(BaseTool):
             if schedule.empty:
                 return {"error": "스케줄 파일을 불러오는 데 실패했습니다."}
             
+            today_date = datetime.now().date()
+
+            # Google sheets 에서 가져온 '날짜' 컬럼 전체를 날짜 객체로 변환.
+            try:
+                schedule[self.DATE_COLUMN_NAME] = pd.to_datetime(
+                    schedule[self.DATE_COLUMN_NAME], format='%Y/%m/%d'
+                ).dt.date
+            except ValueError:
+                # 위 format이 실패할 경우 판다스가 알아서 추측하도록
+                schedule[self.DATE_COLUMN_NAME] = pd.to_datetime(
+                    schedule[self.DATE_COLUMN_NAME]
+                ).dt.date
+            
             # 오늘 있을 스케줄을 찾기
-            today_task = schedule[schedule[self.DATE_COLUMN_NAME] == today_str]
+            today_task = schedule[schedule[self.DATE_COLUMN_NAME] == today_date]
 
             if today_task.empty:
                 message = {"channel_names": [], "contents": []}
@@ -70,7 +81,7 @@ class getFormattedDailySchedule(BaseTool):
                     if self.TASK_DETAIL_COLUMN_NAME in row and  pd.notna(row[self.TASK_DETAIL_COLUMN_NAME]):
                         task_detail = str(row[self.TASK_DETAIL_COLUMN_NAME]).strip()
 
-                    message_lines = [f"## {today_str} 오늘 일정 알림"]
+                    message_lines = [f"## {today_date.strftime('%Y-%m-%d')} 오늘 일정 알림"]
                     message_lines.append(f"\n- **{task_title}**")
                     if task_detail:
                         message_lines.append(f"\n {task_detail}")
@@ -100,7 +111,7 @@ class GetUnsubmitReportTargets(BaseTool):
     def _run(self) -> Dict[List[str], str]:
         try:
 
-            month = datetime.now().strftime("%m")
+            month = str(datetime.now().month)
             PROJECT_MANAGEMENT_FILE_PATH = f"wantedash/포텐업_프로젝트_관리"
             PROJECT_MANAGEMENT_SHEET_NAME = f"{month}월_프로젝트_관리"
 

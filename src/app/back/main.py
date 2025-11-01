@@ -70,7 +70,7 @@ app.include_router(rag_chatbot.rag_router, prefix="/api", tags=["rag"])
 print("static folder......")
 # static 등록
 # os.makedirs("static", exist_ok=True)
-app.mount("/", StaticFiles(directory="src/app/front/static"), name="static")
+app.mount("/", StaticFiles(directory="../front/static"), name="static")
 
 if __name__ == "__main__":
     # Render는 PORT 환경변수를 제공
