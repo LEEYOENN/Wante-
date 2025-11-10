@@ -32,7 +32,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 LOG_DB_PATH = str(DATA_DIR / "chat_logs.db")
 DB_URL = os.getenv("DB_URL")
 
-# DB_PATH = str(DATA_DIR / "vectorstore/chromadb_rag")
+DB_PATH = str(DATA_DIR / "vectorstore/chromadb_rag")
 # LOG_DB_PATH = str(DATA_DIR / "chat_logs.db")
 # CACHE_DB_PATH = str(DATA_DIR / "vectorstore/chromadb_cache")
 
@@ -151,10 +151,14 @@ def create_langgraph_chain():
         raise ValueError("[오류] .env 파일에 DB_URL이 설정되지 않았습니다.")
 
     try:
-        rag_vectorstore = PGVector(
-            connection=DB_URL,
-            embeddings=embedding,
-            collection_name="rag_documents",
+        # rag_vectorstore = PGVector(
+        #     connection=DB_URL,
+        #     embeddings=embedding,
+        #     collection_name="rag_documents",
+        # )
+        rag_vectorstore = Chroma(
+        persist_directory=DB_PATH,
+        embedding_function=embedding
         )
         rag_retriever = rag_vectorstore.as_retriever(
             search_type="similarity", search_kwargs={"k": 5}

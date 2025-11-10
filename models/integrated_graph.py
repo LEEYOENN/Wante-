@@ -6,8 +6,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt.tool_node import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
-import sys
-import os
+import sys, os
 from pathlib import Path
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
@@ -17,6 +16,53 @@ from src.lib.spread_sheets.spread_sheets_toolkit import SpreadSheetsToolkit
 from src.utils.google_utils.google_util import auth
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "./")))
 from prompts.alarm_system_prompt import ALARM_SYSTEM_PROMPT
+
+class State(TypedDict):
+    massages: Annotated[List[BaseMessage], add_messages]
+    next: str
+
+# 멤버 Agent 목록 정의
+members = ["Alarm", "Submit", "RAG"]
+
+# 다음 작업자 선택 옵션 목록 정의
+options_for_next = ["FINISH"] + members
+
+MODEL_NAME = "gpt-4.1-mini"
+
+# 시스템 프롬프트 정의: 작업자 간의 대화를 관리하는 감독자 역할
+system_prompt = (
+    "You are a supervisor tasked with managing a conversation between the"
+    " following workers:  {members}. Given the following user request,"
+    " respond with the worker to act next. Each worker will perform a"
+    " task and respond with their results and status. When finished,"
+    " respond with FINISH."
+)
+
+# ChatPromptTemplate 생성
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        MessagesPlaceholder(variable_name="messages"),
+        (
+            "system",
+            "Given the conversation above, who should act next? "
+            "Or should we FINISH? Select one of: {options}",
+        ),
+    ]
+).partial(options=str(options_for_next), members=", ".join(members))
+
+
+# LLM 초기화
+llm = ChatOpenAI(model=MODEL_NAME, temperature=0)
+
+
+# Supervisor Agent 생성
+def supervisor_agent(state):
+    # 프롬프트와 LLM을 결합하여 체인 구성
+    supervisor_chain = prompt | llm.with_structured_output(RouteResponse)
+    # Agent 호출
+    return supervisor_chain.invoke(state)
+
 
 current_path = Path(__file__).resolve()
 PROJECT_ROOT = current_path.parent.parent
