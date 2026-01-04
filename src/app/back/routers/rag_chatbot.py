@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../")))
 from src.lib.rag.rag_core import create_langgraph_chain, setup_database
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from dto.dto import ChatbotRequestDTO, ChatbotResponseDTO
+from schemas.dto import ChatbotRequestDTO, ChatbotResponseDTO
 
 rag_router = APIRouter()
 

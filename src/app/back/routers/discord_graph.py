@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from models.discord_langgraph import get_discord_langgraph
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from dto.dto import ChatbotRequestDTO, ChatbotResponseDTO
+from schemas.dto import ChatbotRequestDTO, ChatbotResponseDTO
 
 discord_router = APIRouter()
 

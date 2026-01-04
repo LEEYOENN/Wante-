@@ -140,7 +140,7 @@ def create_langgraph_chain():
         )
 
     # Common LLM and Retriever (for RAG node)
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
     embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
     # RAG retriever
